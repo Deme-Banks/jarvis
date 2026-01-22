@@ -17,6 +17,7 @@ from intelligence.proactive_suggestions import ProactiveSuggestions
 from learning.memory import MemorySystem
 from features.command_history import CommandHistory
 from features.auto_complete import AutoComplete
+from features.voice_shortcuts import VoiceShortcuts
 import config_pi as config
 from prompts.voice_jarvis import VOICE_JARVIS_PROMPT
 
@@ -89,6 +90,7 @@ class JarvisPi:
         self.proactive = ProactiveSuggestions(self.memory)
         self.command_history = CommandHistory()
         self.auto_complete = AutoComplete(self.command_history, self.memory)
+        self.shortcuts = VoiceShortcuts()
         
         # Initialize streaming if enabled
         if config.PiConfig.ENABLE_RESPONSE_CACHE:  # Use as proxy for streaming
@@ -158,6 +160,9 @@ class JarvisPi:
             
             if not text or len(text.strip()) < 2:
                 return
+            
+            # Expand shortcuts
+            text = self.shortcuts.expand(text)
             
             print(f"You: {text}")
             
