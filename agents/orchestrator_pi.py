@@ -20,10 +20,34 @@ import config_pi as config
 
 
 class PiOrchestrator:
-    """Lightweight orchestrator for Raspberry Pi using local LLM"""
+    """Lightweight orchestrator for Raspberry Pi using local LLM + Cloud LLM"""
     
-    def __init__(self, local_llm: Optional[LocalLLM] = None):
-        self.llm = local_llm or LocalLLM()
+    def __init__(self, local_llm: Optional[LocalLLM] = None, 
+                 cloud_llm: Optional[CloudLLMManager] = None,
+                 prefer_cloud: bool = False):
+        self.local_llm = local_llm or LocalLLM()
+        self.cloud_manager = cloud_llm or CloudLLMManager()
+        self.prefer_cloud = prefer_cloud
+        
+        # Auto-setup cloud LLMs if available
+        if not self.cloud_manager.list_providers():
+            self.cloud_manager.auto_setup()
+        
+        # Determine which LLM to use
+        if self.prefer_cloud and self.cloud_manager.list_providers():
+            try:
+                self.llm = self.cloud_manager.get_provider()
+            except:
+                self.llm = self.local_llm
+        elif self.local_llm.check_available():
+            self.llm = self.local_llm
+        elif self.cloud_manager.list_providers():
+            try:
+                self.llm = self.cloud_manager.get_provider()
+            except:
+                self.llm = self.local_llm
+        else:
+            self.llm = self.local_llm  # Fallback
         
         # Initialize cache if enabled
         self.cache = None

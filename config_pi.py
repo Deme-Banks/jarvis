@@ -52,6 +52,11 @@ class PiConfig:
     
     # LLM Settings
     DEFAULT_MODEL: str = "local"  # Use local by default
+    
+    # Cloud LLM Settings
+    PREFER_CLOUD_LLM: bool = True  # Use cloud LLM if available
+    OPENAI_MODEL: str = "gpt-4"  # or "gpt-3.5-turbo" for faster/cheaper
+    GEMINI_MODEL: str = "gemini-pro"
     TEMPERATURE: float = 0.7
     MAX_TOKENS: int = 300  # Lower for Pi performance
     
