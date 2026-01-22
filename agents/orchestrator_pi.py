@@ -3,7 +3,8 @@ Raspberry Pi Optimized Orchestrator (Local LLM)
 """
 from typing import List, Dict, Optional, Any
 from llm.local_llm import LocalLLM
-from llm.cloud_llm import CloudLLMManager, OpenAILLM, GeminiLLM
+from llm.cloud_llm import CloudLLMManager
+from llm.smart_ai_selector import SmartAISelector, OpenAILLM, GeminiLLM
 from prompts.orchestrator import ORCHESTRATOR_PROMPT
 from optimization.cache import ResponseCache
 from optimization.precomputed import get_precomputed
@@ -37,7 +38,11 @@ class PiOrchestrator:
         if not self.cloud_manager.list_providers():
             self.cloud_manager.auto_setup()
         
-        # Determine which LLM to use
+        # Use Smart AI Selector to automatically choose the best AI
+        self.ai_selector = SmartAISelector()
+        
+        # For backward compatibility, still set self.llm
+        # But we'll use ai_selector for actual queries
         if self.prefer_cloud and self.cloud_manager.list_providers():
             try:
                 self.llm = self.cloud_manager.get_provider()
@@ -139,17 +144,35 @@ class PiOrchestrator:
         agent_names = self._determine_agents(user_request)
         
         if not agent_names:
-            # Direct response
-            response = self.llm.chat(
+            # Use Smart AI Selector to get the best response
+            result = self.ai_selector.get_best_response(
                 user_request,
-                system_prompt=ORCHESTRATOR_PROMPT
+                system_prompt=ORCHESTRATOR_PROMPT,
+                context=context
             )
             
-            # Cache response
-            if self.cache:
-                self.cache.set(user_request, response, context)
-            
-            return response
+            if result.get("success"):
+                response = result["response"]
+                provider_used = result.get("provider", "unknown")
+                
+                # Cache response
+                if self.cache:
+                    self.cache.set(user_request, response, context)
+                
+                # Optionally include provider info in response (for transparency)
+                # For voice responses, we'll just return the response
+                return response
+            else:
+                # Fallback to direct LLM call if selector fails
+                response = self.llm.chat(
+                    user_request,
+                    system_prompt=ORCHESTRATOR_PROMPT
+                )
+                
+                if self.cache:
+                    self.cache.set(user_request, response, context)
+                
+                return response
         
         # Collect agent responses (sequential for Pi)
         agent_responses = {}
@@ -164,10 +187,21 @@ Agent insights:
 
 Provide a concise voice-optimized response."""
         
-        response = self.llm.chat(
+        # Use Smart AI Selector for synthesis too
+        result = self.ai_selector.get_best_response(
             synthesis,
-            system_prompt=ORCHESTRATOR_PROMPT
+            system_prompt=ORCHESTRATOR_PROMPT,
+            context=context
         )
+        
+        if result.get("success"):
+            response = result["response"]
+        else:
+            # Fallback
+            response = self.llm.chat(
+                synthesis,
+                system_prompt=ORCHESTRATOR_PROMPT
+            )
         
         # Cache response
         if self.cache:
