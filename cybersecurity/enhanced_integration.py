@@ -15,6 +15,7 @@ from cybersecurity.process_injection import ProcessInjection
 from cybersecurity.advanced_obfuscation import AdvancedObfuscator
 from cybersecurity.malware_builder import MalwareBuilder
 from cybersecurity.advanced_payloads import AdvancedPayloads
+from cybersecurity.ai_malware_generator import AIMalwareGenerator
 from cybersecurity.improvements import ImprovedNLP, EnhancedAuthorization, VSOCReporter
 from prompts.specialists import SECURITY_PRIVACY_PROMPT
 import config_pi as config
@@ -36,6 +37,7 @@ class EnhancedCybersecurityOrchestrator:
         self.advanced_obfuscator = AdvancedObfuscator()
         self.malware_builder = MalwareBuilder()
         self.advanced_payloads = AdvancedPayloads()
+        self.ai_malware_generator = AIMalwareGenerator()
         self.nlp = ImprovedNLP()
         self.authorization = EnhancedAuthorization()
         self.reporter = VSOCReporter()
@@ -83,6 +85,11 @@ class EnhancedCybersecurityOrchestrator:
         # Advanced obfuscation
         if any(word in request_lower for word in ["fully obfuscate", "multi layer", "advanced obfuscate"]):
             return self._handle_advanced_obfuscation(request)
+        
+        # AI malware generation
+        if any(word in request_lower for word in ["ai generate malware", "ai create malware", "ai make malware", 
+                                                   "program malware", "code malware", "write malware"]):
+            return self._handle_ai_malware_generation(request)
         
         # Build custom malware
         if any(word in request_lower for word in ["build", "create custom", "make", "generate"]):
@@ -369,7 +376,18 @@ class EnhancedCybersecurityOrchestrator:
             return self.base_orchestrator.process(
                 f"{SECURITY_PRIVACY_PROMPT}\n\nUser question: {request}"
             )
-        return "Security module ready. Available: malware creation, DDoS testing, USB deployment, persistence, evasion, anti-detection, process injection, advanced obfuscation, custom malware builder, advanced payloads, scanning, reporting."
+        return "Security module ready. Available: malware creation, DDoS testing, USB deployment, persistence, evasion, anti-detection, process injection, advanced obfuscation, custom malware builder, advanced payloads, AI malware generation, scanning, reporting."
+    
+    def _handle_ai_malware_generation(self, request: str) -> str:
+        """Handle AI-powered malware generation"""
+        try:
+            result = self.ai_malware_generator.generate_from_voice(request)
+            if result.get('success'):
+                return f"AI-generated malware saved to: {result['file']}\nType: {result.get('type', 'custom')}\nFeatures: {', '.join(result.get('features', []))}\n\n{result['warning']}"
+            else:
+                return f"Error generating malware: {result.get('error', 'Unknown error')}"
+        except Exception as e:
+            return f"Error: {str(e)}"
     
     def _handle_build_malware(self, request: str) -> str:
         """Handle custom malware building"""
