@@ -7,6 +7,9 @@ import tempfile
 import json
 from typing import Dict, List, Optional
 from datetime import datetime
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 
 class SocialEngineeringKit:
