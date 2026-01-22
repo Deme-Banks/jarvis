@@ -70,19 +70,131 @@ class JARVISDashboard:
 <html>
 <head>
     <title>JARVIS Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: #fff; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .card { background: #2a2a2a; padding: 20px; margin: 10px 0; border-radius: 8px; }
-        .stat { display: inline-block; margin: 10px; padding: 15px; background: #3a3a3a; border-radius: 5px; }
-        .stat-value { font-size: 24px; font-weight: bold; color: #4CAF50; }
-        .stat-label { font-size: 12px; color: #aaa; }
-        button { background: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
-        input { padding: 10px; width: 300px; border-radius: 5px; border: 1px solid #555; background: #333; color: #fff; }
+        :root {
+            --bg-color: #1a1a1a;
+            --fg-color: #fff;
+            --card-bg: #2a2a2a;
+            --primary: #4CAF50;
+            --secondary: #3a3a3a;
+        }
+        
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0;
+            padding: 20px; 
+            background: var(--bg-color); 
+            color: var(--fg-color); 
+        }
+        
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+        }
+        
+        .card { 
+            background: var(--card-bg); 
+            padding: 20px; 
+            margin: 10px 0; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .stat { 
+            display: inline-block; 
+            margin: 10px; 
+            padding: 15px; 
+            background: var(--secondary); 
+            border-radius: 5px; 
+            min-width: 120px;
+        }
+        
+        .stat-value { 
+            font-size: 24px; 
+            font-weight: bold; 
+            color: var(--primary); 
+        }
+        
+        .stat-label { 
+            font-size: 12px; 
+            color: #aaa; 
+        }
+        
+        button { 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 5px;
+        }
+        
+        button:hover {
+            opacity: 0.9;
+        }
+        
+        input { 
+            padding: 10px; 
+            width: 100%;
+            max-width: 400px;
+            border-radius: 5px; 
+            border: 1px solid #555; 
+            background: #333; 
+            color: #fff; 
+            box-sizing: border-box;
+        }
+        
+        .theme-selector {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+        }
+        
+        .theme-selector select {
+            padding: 8px;
+            border-radius: 5px;
+            background: var(--card-bg);
+            color: var(--fg-color);
+            border: 1px solid #555;
+        }
+        
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .card { padding: 15px; margin: 5px 0; }
+            .stat { 
+                display: block; 
+                width: 100%; 
+                margin: 5px 0; 
+            }
+            input { width: 100%; max-width: 100%; }
+            button { width: 100%; margin: 5px 0; }
+            .theme-selector {
+                position: relative;
+                top: 0;
+                right: 0;
+                margin-bottom: 10px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .stat-value { font-size: 20px; }
+            .card h2 { font-size: 18px; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <div class="theme-selector">
+            <select id="themeSelect" onchange="changeTheme()">
+                <option value="dark">Dark Theme</option>
+                <option value="light">Light Theme</option>
+                <option value="cyber">Cyber Theme</option>
+            </select>
+        </div>
         <h1>JARVIS Dashboard</h1>
         
         <div class="card">
