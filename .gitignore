@@ -68,6 +68,10 @@ Thumbs.db
 *.log
 logs/
 
+# Learning/Memory data
+memory/
+*.pkl
+
 # Temporary files
 *.tmp
 *.temp

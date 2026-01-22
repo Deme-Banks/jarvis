@@ -5,6 +5,7 @@ from typing import Optional, Dict
 from agents.orchestrator_pi import PiOrchestrator
 from cybersecurity.enhanced_ddos import EnhancedDDoSTester
 from cybersecurity.enhanced_malware import EnhancedMalwareLab
+from cybersecurity.usb_integration import USBIntegration
 from cybersecurity.improvements import ImprovedNLP, EnhancedAuthorization, VSOCReporter
 from prompts.specialists import SECURITY_PRIVACY_PROMPT
 import config_pi as config
@@ -17,6 +18,7 @@ class EnhancedCybersecurityOrchestrator:
         self.base_orchestrator = base_orchestrator
         self.malware_lab = EnhancedMalwareLab(isolated_mode=True)
         self.ddos_tester = EnhancedDDoSTester(max_threads=50)
+        self.usb_integration = USBIntegration()
         self.nlp = ImprovedNLP()
         self.authorization = EnhancedAuthorization()
         self.reporter = VSOCReporter()
@@ -24,6 +26,10 @@ class EnhancedCybersecurityOrchestrator:
     def handle_security_request(self, request: str) -> str:
         """Enhanced request handling with NLP"""
         request_lower = request.lower()
+        
+        # USB deployment
+        if any(word in request_lower for word in ["usb", "deploy", "put on usb", "to usb"]):
+            return self._handle_usb_deployment(request)
         
         # Malware creation
         if any(word in request_lower for word in ["create", "make", "generate", "payload", "malware", "virus"]):
@@ -170,10 +176,14 @@ class EnhancedCybersecurityOrchestrator:
             return "Nmap available. Specify target."
         return "Install nmap: sudo apt-get install nmap"
     
+    def _handle_usb_deployment(self, request: str) -> str:
+        """Handle USB deployment requests"""
+        return self.usb_integration.handle_voice_command(request)
+    
     def _handle_general_security(self, request: str) -> str:
         """Handle general security questions"""
         if self.base_orchestrator:
             return self.base_orchestrator.process(
                 f"{SECURITY_PRIVACY_PROMPT}\n\nUser question: {request}"
             )
-        return "Security module ready. Available: malware creation, DDoS testing, scanning, reporting."
+        return "Security module ready. Available: malware creation, DDoS testing, USB deployment, scanning, reporting."
