@@ -40,6 +40,11 @@ from features.quick_actions import QuickActions
 from features.voice_commands_advanced import AdvancedVoiceCommands
 from utils.system_optimizer import SystemOptimizer
 from utils.backup_manager import BackupManager
+from features.real_time_collaboration import RealTimeCollaboration
+from features.command_aliases import CommandAliases
+from features.smart_notifications import SmartNotifications
+from reporting.advanced_reports import AdvancedReporter
+from intelligence.ai_suggestions import AISuggestions
 import config_pi as config
 from prompts.voice_jarvis import VOICE_JARVIS_PROMPT
 
@@ -195,6 +200,11 @@ class JarvisPi:
         self.advanced_voice = AdvancedVoiceCommands()
         self.system_optimizer = SystemOptimizer()
         self.backup_manager = BackupManager()
+        self.collaboration = RealTimeCollaboration()
+        self.command_aliases = CommandAliases()
+        self.notifications = SmartNotifications()
+        self.reporter = AdvancedReporter()
+        self.ai_suggestions = AISuggestions()
         
         # Initialize streaming if enabled
         if config.PiConfig.ENABLE_RESPONSE_CACHE:  # Use as proxy for streaming
