@@ -3,6 +3,7 @@ JARVIS Voice Assistant - Raspberry Pi Main Entry Point
 """
 import time
 import threading
+import os
 from typing import Optional
 from voice.audio_pi import PiAudioCapture, PiAudioOutput
 from voice.stt_pi import PiSTT, WakeWordDetector
@@ -10,6 +11,7 @@ from voice.streaming_stt import StreamingSTT
 from voice.tts_pi import PiTTS
 from agents.orchestrator_pi import PiOrchestrator
 from llm.local_llm import LocalLLM
+from llm.cloud_llm import CloudLLMManager, OpenAILLM, GeminiLLM
 from llm.streaming_llm import StreamingLLM
 from optimization.lazy_loader import get_lazy
 from utils.error_handler import get_error_handler

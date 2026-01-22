@@ -3,6 +3,7 @@ Raspberry Pi Optimized Orchestrator (Local LLM)
 """
 from typing import List, Dict, Optional, Any
 from llm.local_llm import LocalLLM
+from llm.cloud_llm import CloudLLMManager, OpenAILLM, GeminiLLM
 from prompts.orchestrator import ORCHESTRATOR_PROMPT
 from optimization.cache import ResponseCache
 from optimization.precomputed import get_precomputed
