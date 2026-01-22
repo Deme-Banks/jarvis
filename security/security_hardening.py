@@ -4,6 +4,7 @@ Security Hardening - Advanced security measures
 import os
 import hashlib
 import secrets
+import base64
 from typing import Dict, List, Optional
 from datetime import datetime
 
