@@ -17,6 +17,7 @@ from cybersecurity.malware_builder import MalwareBuilder
 from cybersecurity.advanced_payloads import AdvancedPayloads
 from cybersecurity.ai_malware_generator import AIMalwareGenerator
 from mobile_security import iOSTestingTools, AndroidTestingTools
+from security.vulnerability_scanner import VulnerabilityScanner
 from cybersecurity.improvements import ImprovedNLP, EnhancedAuthorization, VSOCReporter
 from prompts.specialists import SECURITY_PRIVACY_PROMPT
 import config_pi as config
@@ -41,6 +42,7 @@ class EnhancedCybersecurityOrchestrator:
         self.ai_malware_generator = AIMalwareGenerator()
         self.ios_tools = iOSTestingTools()
         self.android_tools = AndroidTestingTools()
+        self.vulnerability_scanner = VulnerabilityScanner()
         self.nlp = ImprovedNLP()
         self.authorization = EnhancedAuthorization()
         self.reporter = VSOCReporter()
@@ -107,6 +109,10 @@ class EnhancedCybersecurityOrchestrator:
         # Mobile security tools
         if any(word in request_lower for word in ["iphone", "ios", "android", "mobile", "phone"]):
             return self._handle_mobile_security(request)
+        
+        # Vulnerability scanning
+        if any(word in request_lower for word in ["vulnerability", "vuln", "scan vuln", "security scan"]):
+            return self._handle_vulnerability_scanning(request)
         
         # Scanning
         if any(word in request_lower for word in ["scan", "nmap", "vulnerability"]):
@@ -438,6 +444,33 @@ class EnhancedCybersecurityOrchestrator:
                 return "Android tools: PIN/pattern brute force, APK analyzer, Frida hooks, ADB exploits"
         
         return "Mobile security tools available for iOS and Android. Specify platform and tool type."
+    
+    def _handle_vulnerability_scanning(self, request: str) -> str:
+        """Handle vulnerability scanning requests"""
+        request_lower = request.lower()
+        
+        # Extract target
+        import re
+        ip_match = re.search(r'\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b', request)
+        url_match = re.search(r'https?://[^\s]+', request)
+        
+        if url_match:
+            # Web vulnerability scan
+            url = url_match.group()
+            scan_type = "intensive" if "intensive" in request_lower else "basic"
+            result = self.vulnerability_scanner.create_web_vulnerability_scanner(url)
+            return f"Created web vulnerability scanner: {result['file']}. Target: {result['url']}. {result['warning']}"
+        
+        elif ip_match:
+            # Network vulnerability scan
+            target = ip_match.group()
+            scan_type = "intensive" if "intensive" in request_lower else "quick" if "quick" in request_lower else "basic"
+            result = self.vulnerability_scanner.scan_vulnerabilities(target, scan_type)
+            if result.get('success') is False:
+                return f"Error: {result.get('error')}"
+            return f"Created vulnerability scan: {result['file']}. Target: {result['target']}. Type: {result['scan_type']}. {result['warning']}"
+        
+        return "Specify target. Example: 'Scan vulnerabilities on 192.168.1.1' or 'Scan web vulnerabilities on https://example.com'"
     
     def _handle_ai_malware_generation(self, request: str) -> str:
         """Handle AI-powered malware generation"""

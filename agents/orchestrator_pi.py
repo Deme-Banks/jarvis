@@ -17,6 +17,9 @@ from prompts.specialists import (
     RESEARCH_ANALYST_PROMPT
 )
 from ai_coding import AICodeGenerator, AICodeReader, AICodeBuilder
+from ai_coding.vision_analysis import VisionAnalyzer
+from ai_coding.document_analyzer import DocumentAnalyzer
+from ai_coding.web_search import WebSearch
 import config_pi as config
 
 
@@ -54,6 +57,9 @@ class PiOrchestrator:
         self.code_generator = AICodeGenerator(self.llm)
         self.code_reader = AICodeReader(self.llm)
         self.code_builder = AICodeBuilder()
+        self.vision_analyzer = VisionAnalyzer(self.llm)
+        self.document_analyzer = DocumentAnalyzer(self.llm)
+        self.web_search = WebSearch()
         
         # Initialize cache if enabled
         self.cache = None
