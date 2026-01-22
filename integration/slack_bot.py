@@ -1,87 +1,82 @@
 """
-Slack Bot Integration
+Slack Bot Integration - Team communication
 """
-from typing import Dict, Optional
+import os
 import requests
-import json
+from typing import Dict, Optional
+from utils.cache_optimizer import SmartCache
+from utils.performance_profiler import PerformanceProfiler
 
 
 class SlackBot:
     """Slack bot integration for JARVIS"""
     
-    def __init__(self, webhook_url: Optional[str] = None, token: Optional[str] = None):
-        self.webhook_url = webhook_url
-        self.token = token
+    def __init__(self, bot_token: Optional[str] = None):
+        self.bot_token = bot_token or os.getenv("SLACK_BOT_TOKEN")
         self.api_url = "https://slack.com/api"
+        self.cache = SmartCache()
+        self.profiler = PerformanceProfiler()
     
-    def send_message(self, channel: str, text: str, blocks: Optional[list] = None) -> Dict:
+    def send_message(self, channel: str, text: str, 
+                    thread_ts: Optional[str] = None) -> Dict:
         """Send message to Slack channel"""
-        if not self.token:
-            return {'success': False, 'error': 'Slack token not configured'}
+        if not self.bot_token:
+            return {"error": "Slack bot token not configured"}
         
         url = f"{self.api_url}/chat.postMessage"
         headers = {
-            'Authorization': f'Bearer {self.token}',
-            'Content-Type': 'application/json'
+            "Authorization": f"Bearer {self.bot_token}",
+            "Content-Type": "application/json"
         }
-        
         data = {
-            'channel': channel,
-            'text': text
+            "channel": channel,
+            "text": text
         }
-        
-        if blocks:
-            data['blocks'] = blocks
+        if thread_ts:
+            data["thread_ts"] = thread_ts
         
         try:
-            response = requests.post(url, headers=headers, json=data, timeout=10)
-            result = response.json()
-            
-            return {
-                'success': result.get('ok', False),
-                'message_ts': result.get('ts'),
-                'error': result.get('error')
-            }
+            response = requests.post(url, headers=headers, json=data)
+            response.raise_for_status()
+            return {"success": True, "data": response.json()}
         except Exception as e:
-            return {'success': False, 'error': str(e)}
+            return {"success": False, "error": str(e)}
     
-    def send_webhook_message(self, text: str, username: str = "JARVIS") -> Dict:
-        """Send message via webhook"""
-        if not self.webhook_url:
-            return {'success': False, 'error': 'Webhook URL not configured'}
+    def create_channel(self, name: str, is_private: bool = False) -> Dict:
+        """Create a Slack channel"""
+        if not self.bot_token:
+            return {"error": "Slack bot token not configured"}
         
+        url = f"{self.api_url}/conversations.create"
+        headers = {
+            "Authorization": f"Bearer {self.bot_token}",
+            "Content-Type": "application/json"
+        }
         data = {
-            'text': text,
-            'username': username
+            "name": name,
+            "is_private": is_private
         }
         
         try:
-            response = requests.post(self.webhook_url, json=data, timeout=10)
-            return {
-                'success': response.status_code == 200,
-                'status_code': response.status_code
-            }
+            response = requests.post(url, headers=headers, json=data)
+            response.raise_for_status()
+            return {"success": True, "data": response.json()}
         except Exception as e:
-            return {'success': False, 'error': str(e)}
+            return {"success": False, "error": str(e)}
     
-    def create_rich_message(self, title: str, text: str, color: str = "good") -> list:
-        """Create rich message blocks"""
-        return [
-            {
-                "type": "header",
-                "text": {
-                    "type": "plain_text",
-                    "text": title
-                }
-            },
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": text
-                }
-            },
-            {
-                "type": "divider"
-            }
-        ]
+    def get_channels(self) -> Dict:
+        """Get list of channels"""
+        if not self.bot_token:
+            return {"error": "Slack bot token not configured"}
+        
+        url = f"{self.api_url}/conversations.list"
+        headers = {
+            "Authorization": f"Bearer {self.bot_token}"
+        }
+        
+        try:
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            return {"success": True, "channels": response.json().get("channels", [])}
+        except Exception as e:
+            return {"success": False, "error": str(e)}

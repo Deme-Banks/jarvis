@@ -1,80 +1,58 @@
 """
-Telegram Bot Integration
+Telegram Bot Integration - Messaging
 """
-from typing import Dict, Optional, List
+import os
 import requests
+from typing import Dict, Optional
+from utils.cache_optimizer import SmartCache
+from utils.performance_profiler import PerformanceProfiler
 
 
 class TelegramBot:
     """Telegram bot integration for JARVIS"""
     
     def __init__(self, bot_token: Optional[str] = None):
-        self.bot_token = bot_token
-        self.api_url = f"https://api.telegram.org/bot{bot_token}" if bot_token else None
+        self.bot_token = bot_token or os.getenv("TELEGRAM_BOT_TOKEN")
+        self.api_url = f"https://api.telegram.org/bot{self.bot_token}"
+        self.cache = SmartCache()
+        self.profiler = PerformanceProfiler()
     
-    def send_message(self, chat_id: str, text: str, parse_mode: str = "Markdown") -> Dict:
+    def send_message(self, chat_id: str, text: str, 
+                    parse_mode: str = "HTML") -> Dict:
         """Send message to Telegram chat"""
-        if not self.api_url:
-            return {'success': False, 'error': 'Bot token not configured'}
+        if not self.bot_token:
+            return {"error": "Telegram bot token not configured"}
         
         url = f"{self.api_url}/sendMessage"
         data = {
-            'chat_id': chat_id,
-            'text': text,
-            'parse_mode': parse_mode
+            "chat_id": chat_id,
+            "text": text,
+            "parse_mode": parse_mode
         }
         
         try:
-            response = requests.post(url, json=data, timeout=10)
-            result = response.json()
-            
-            return {
-                'success': result.get('ok', False),
-                'message_id': result.get('result', {}).get('message_id'),
-                'error': result.get('description')
-            }
+            response = requests.post(url, json=data)
+            response.raise_for_status()
+            return {"success": True, "data": response.json()}
         except Exception as e:
-            return {'success': False, 'error': str(e)}
+            return {"success": False, "error": str(e)}
     
-    def send_photo(self, chat_id: str, photo_path: str, caption: str = "") -> Dict:
+    def send_photo(self, chat_id: str, photo_path: str, 
+                  caption: Optional[str] = None) -> Dict:
         """Send photo to Telegram chat"""
-        if not self.api_url:
-            return {'success': False, 'error': 'Bot token not configured'}
+        if not self.bot_token:
+            return {"error": "Telegram bot token not configured"}
         
         url = f"{self.api_url}/sendPhoto"
-        
-        try:
-            with open(photo_path, 'rb') as photo:
-                files = {'photo': photo}
-                data = {
-                    'chat_id': chat_id,
-                    'caption': caption
-                }
-                response = requests.post(url, files=files, data=data, timeout=30)
-                result = response.json()
-                
-                return {
-                    'success': result.get('ok', False),
-                    'message_id': result.get('result', {}).get('message_id')
-                }
-        except Exception as e:
-            return {'success': False, 'error': str(e)}
-    
-    def get_updates(self, offset: int = 0) -> List[Dict]:
-        """Get bot updates (messages)"""
-        if not self.api_url:
-            return []
-        
-        url = f"{self.api_url}/getUpdates"
-        params = {'offset': offset}
-        
-        try:
-            response = requests.get(url, params=params, timeout=10)
-            result = response.json()
+        with open(photo_path, 'rb') as photo:
+            files = {'photo': photo}
+            data = {"chat_id": chat_id}
+            if caption:
+                data["caption"] = caption
             
-            if result.get('ok'):
-                return result.get('result', [])
-        except:
-            pass
-        
-        return []
+            try:
+                response = requests.post(url, files=files, data=data)
+                response.raise_for_status()
+                return {"success": True, "data": response.json()}
+            except Exception as e:
+                return {"success": False, "error": str(e)}
