@@ -50,6 +50,11 @@ class PiOrchestrator:
         else:
             self.llm = self.local_llm  # Fallback
         
+        # Initialize AI coding tools
+        self.code_generator = AICodeGenerator(self.llm)
+        self.code_reader = AICodeReader(self.llm)
+        self.code_builder = AICodeBuilder()
+        
         # Initialize cache if enabled
         self.cache = None
         if config.PiConfig.ENABLE_RESPONSE_CACHE:
