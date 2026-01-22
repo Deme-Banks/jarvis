@@ -16,6 +16,7 @@ from prompts.specialists import (
     CREATIVE_DIRECTOR_PROMPT,
     RESEARCH_ANALYST_PROMPT
 )
+from ai_coding import AICodeGenerator, AICodeReader, AICodeBuilder
 import config_pi as config
 
 
@@ -104,6 +105,11 @@ class PiOrchestrator:
     
     def process(self, user_request: str, context: Optional[Dict[str, Any]] = None) -> str:
         """Process user request (optimized for Pi)"""
+        # Check for coding requests first
+        coding_response = self._handle_coding_request(user_request)
+        if coding_response:
+            return coding_response
+        
         # Check pre-computed responses first (fastest)
         if config.PiConfig.USE_PRECOMPUTED:
             precomputed = get_precomputed(user_request)
