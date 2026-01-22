@@ -2,7 +2,7 @@
 GPU Acceleration for JARVIS
 """
 import os
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 import subprocess
 
 
