@@ -18,6 +18,9 @@ from learning.memory import MemorySystem
 from features.command_history import CommandHistory
 from features.auto_complete import AutoComplete
 from features.voice_shortcuts import VoiceShortcuts
+from analytics.performance_monitor import PerformanceMonitor
+from analytics.usage_analytics import UsageAnalytics
+from plugins.plugin_system import PluginManager
 import config_pi as config
 from prompts.voice_jarvis import VOICE_JARVIS_PROMPT
 
@@ -91,6 +94,9 @@ class JarvisPi:
         self.command_history = CommandHistory()
         self.auto_complete = AutoComplete(self.command_history, self.memory)
         self.shortcuts = VoiceShortcuts()
+        self.performance_monitor = PerformanceMonitor()
+        self.usage_analytics = UsageAnalytics()
+        self.plugin_manager = PluginManager()
         
         # Initialize streaming if enabled
         if config.PiConfig.ENABLE_RESPONSE_CACHE:  # Use as proxy for streaming
@@ -182,20 +188,37 @@ class JarvisPi:
                     text = favorites[-1]["command"]
                     print(f"Using favorite: {text}")
             
-            # Get response from orchestrator (with error handling)
-            try:
-                response = self.orchestrator.process(
-                    text,
-                    context={"memory": self.context_memory[-5:]}
-                )
+            # Check plugins first
+            start_time = time.time()
+            plugin_response = self.plugin_manager.handle_command(
+                text,
+                context={"memory": self.context_memory[-5:]}
+            )
+            
+            if plugin_response:
+                response = plugin_response
                 success = True
-            except Exception as e:
-                response = self.error_handler.handle_error(
-                    e,
-                    context={"user_input": text},
-                    retry=True
-                ) or "I encountered an error. Let me try again."
-                success = False
+            else:
+                # Get response from orchestrator (with error handling)
+                try:
+                    response = self.orchestrator.process(
+                        text,
+                        context={"memory": self.context_memory[-5:]}
+                    )
+                    success = True
+                except Exception as e:
+                    response = self.error_handler.handle_error(
+                        e,
+                        context={"user_input": text},
+                        retry=True
+                    ) or "I encountered an error. Let me try again."
+                    success = False
+            
+            # Record metrics
+            response_time = time.time() - start_time
+            self.performance_monitor.record_response_time(response_time)
+            self.performance_monitor.record_command(text)
+            self.usage_analytics.record_command(text, success, response_time)
             
             # Save to history
             self.command_history.add(text, response, success)
