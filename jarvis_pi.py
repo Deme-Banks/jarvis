@@ -45,6 +45,11 @@ from features.command_aliases import CommandAliases
 from features.smart_notifications import SmartNotifications
 from reporting.advanced_reports import AdvancedReporter
 from intelligence.ai_suggestions import AISuggestions
+from integration.discord_bot import DiscordBot
+from integration.email_notifications import EmailNotifications
+from security.advanced_security import AdvancedSecurity
+from deployment.docker_setup import DockerSetup
+from features.voice_feedback import VoiceFeedback
 import config_pi as config
 from prompts.voice_jarvis import VOICE_JARVIS_PROMPT
 
@@ -205,6 +210,11 @@ class JarvisPi:
         self.notifications = SmartNotifications()
         self.reporter = AdvancedReporter()
         self.ai_suggestions = AISuggestions()
+        self.discord_bot = DiscordBot()
+        self.email_notifications = EmailNotifications()
+        self.advanced_security = AdvancedSecurity()
+        self.docker_setup = DockerSetup()
+        self.voice_feedback = VoiceFeedback()
         
         # Initialize streaming if enabled
         if config.PiConfig.ENABLE_RESPONSE_CACHE:  # Use as proxy for streaming
