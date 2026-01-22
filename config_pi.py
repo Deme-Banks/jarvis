@@ -67,6 +67,11 @@ class PiConfig:
     AGENT_TIMEOUT: float = 15.0  # Shorter timeout
     MAX_CONCURRENT_AGENTS: int = 1  # Sequential processing
     
+    # Advanced Features
+    ENABLE_STREAMING: bool = True  # Enable streaming STT/LLM
+    ENABLE_ASYNC: bool = True  # Enable async operations
+    ENABLE_ERROR_RECOVERY: bool = True  # Enable error recovery
+    
     # Hardware Detection
     IS_RASPBERRY_PI: bool = os.path.exists("/proc/device-tree/model")
     
