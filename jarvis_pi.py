@@ -36,6 +36,10 @@ from automation.scheduled_tasks import ScheduledTasks
 from ai_coding.code_executor import CodeExecutor
 from ai_coding.web_search import WebSearch
 from analytics.advanced_analytics import AdvancedAnalytics
+from features.quick_actions import QuickActions
+from features.voice_commands_advanced import AdvancedVoiceCommands
+from utils.system_optimizer import SystemOptimizer
+from utils.backup_manager import BackupManager
 import config_pi as config
 from prompts.voice_jarvis import VOICE_JARVIS_PROMPT
 
@@ -187,6 +191,10 @@ class JarvisPi:
         self.code_executor = CodeExecutor()
         self.web_search = WebSearch()
         self.advanced_analytics = AdvancedAnalytics()
+        self.quick_actions = QuickActions()
+        self.advanced_voice = AdvancedVoiceCommands()
+        self.system_optimizer = SystemOptimizer()
+        self.backup_manager = BackupManager()
         
         # Initialize streaming if enabled
         if config.PiConfig.ENABLE_RESPONSE_CACHE:  # Use as proxy for streaming
