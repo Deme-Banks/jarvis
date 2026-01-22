@@ -20,9 +20,12 @@ from learning.memory import MemorySystem
 from features.command_history import CommandHistory
 from features.auto_complete import AutoComplete
 from features.voice_shortcuts import VoiceShortcuts
+from features.voice_enhancements import VoiceEnhancements
 from analytics.performance_monitor import PerformanceMonitor
 from analytics.usage_analytics import UsageAnalytics
 from plugins.plugin_system import PluginManager
+from optimization.gpu_acceleration import GPUAccelerator
+from automation.workflow_engine import WorkflowEngine
 import config_pi as config
 from prompts.voice_jarvis import VOICE_JARVIS_PROMPT
 
@@ -158,9 +161,12 @@ class JarvisPi:
         self.command_history = CommandHistory()
         self.auto_complete = AutoComplete(self.command_history, self.memory)
         self.shortcuts = VoiceShortcuts()
+        self.voice_enhancements = VoiceEnhancements()
         self.performance_monitor = PerformanceMonitor()
         self.usage_analytics = UsageAnalytics()
         self.plugin_manager = PluginManager()
+        self.gpu_accelerator = GPUAccelerator()
+        self.workflow_engine = WorkflowEngine()
         
         # Initialize streaming if enabled
         if config.PiConfig.ENABLE_RESPONSE_CACHE:  # Use as proxy for streaming
