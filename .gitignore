@@ -1,0 +1,79 @@
+# Environment variables
+.env
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# VSOC Reports
+vsoc_reports/
+*.json
+!package.json
+!package-lock.json
+
+# Authorization files
+authorized_targets.json
+
+# Malware lab sandboxes
+malware_lab_*/
+
+# Audio files
+*.wav
+*.mp3
+*.ogg
+
+# Models (large files)
+models/
+*.model
+*.bin
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+test.wav
+
+# Security
+*.pem
+*.key
+*.crt
