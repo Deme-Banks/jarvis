@@ -86,7 +86,24 @@ class CommandAliases:
             'health': 'check system health',
             'stats': 'show statistics',
             'backup': 'create backup',
-            'help': 'what can you do'
+            'help': 'what can you do',
+            'db': 'database query',
+            'mysql': 'connect to MySQL',
+            'postgres': 'connect to PostgreSQL',
+            'mongo': 'connect to MongoDB',
+            'dropbox': 'upload to Dropbox',
+            'drive': 'upload to Google Drive',
+            'onedrive': 'upload to OneDrive',
+            'salesforce': 'create Salesforce lead',
+            'hubspot': 'create HubSpot contact',
+            'sso': 'authenticate with SSO',
+            'okta': 'authenticate with Okta',
+            'azure': 'authenticate with Azure AD',
+            'tenant': 'create tenant',
+            'multimodal': 'analyze with multi-modal AI',
+            'emotion': 'detect emotion from voice',
+            'complete': 'autocomplete command',
+            'sound': 'play sound effect'
         }
         
         for alias, command in defaults.items():
