@@ -6,10 +6,15 @@ import threading
 from typing import Optional
 from voice.audio_pi import PiAudioCapture, PiAudioOutput
 from voice.stt_pi import PiSTT, WakeWordDetector
+from voice.streaming_stt import StreamingSTT
 from voice.tts_pi import PiTTS
 from agents.orchestrator_pi import PiOrchestrator
 from llm.local_llm import LocalLLM
+from llm.streaming_llm import StreamingLLM
 from optimization.lazy_loader import get_lazy
+from utils.error_handler import get_error_handler
+from intelligence.proactive_suggestions import ProactiveSuggestions
+from learning.memory import MemorySystem
 import config_pi as config
 from prompts.voice_jarvis import VOICE_JARVIS_PROMPT
 
@@ -73,6 +78,18 @@ class JarvisPi:
         self.is_speaking = False
         self.interrupted = False
         self.context_memory = []
+        
+        # Enhanced features
+        self.streaming_stt = None
+        self.streaming_llm = None
+        self.error_handler = get_error_handler()
+        self.memory = MemorySystem()
+        self.proactive = ProactiveSuggestions(self.memory)
+        
+        # Initialize streaming if enabled
+        if config.PiConfig.ENABLE_RESPONSE_CACHE:  # Use as proxy for streaming
+            self.streaming_stt = StreamingSTT(self.stt)
+            self.streaming_llm = StreamingLLM(self.llm)
     
     def start(self):
         """Start JARVIS system"""
@@ -125,29 +142,80 @@ class JarvisPi:
                     silence_frames = 0
     
     def _process_audio(self, audio_data: bytes):
-        """Process captured audio"""
-        # Transcribe
-        text = self.stt.transcribe(audio_data)
-        if not text or len(text.strip()) < 2:
-            return
+        """Process captured audio with enhanced features"""
+        try:
+            # Transcribe (use streaming if available)
+            if self.streaming_stt and self.streaming_stt.is_streaming:
+                text = self.streaming_stt.get_text(timeout=0.5)
+                if not text:
+                    text = self.stt.transcribe(audio_data)
+            else:
+                text = self.stt.transcribe(audio_data)
+            
+            if not text or len(text.strip()) < 2:
+                return
+            
+            print(f"You: {text}")
+            
+            # Get response from orchestrator (with error handling)
+            try:
+                response = self.orchestrator.process(
+                    text,
+                    context={"memory": self.context_memory[-5:]}
+                )
+            except Exception as e:
+                response = self.error_handler.handle_error(
+                    e,
+                    context={"user_input": text},
+                    retry=True
+                ) or "I encountered an error. Let me try again."
+            
+            # Add proactive suggestions if appropriate
+            suggestions = self.proactive.suggest_next_action(text)
+            if suggestions and len(response) < 100:
+                response += f" [Suggestions: {', '.join(suggestions[:2])}]"
+            
+            # Update memory
+            self.context_memory.append({"user": text, "assistant": response})
+            if len(self.context_memory) > config.PiConfig.CONTEXT_MEMORY_SIZE:
+                self.context_memory = self.context_memory[-config.PiConfig.CONTEXT_MEMORY_SIZE:]
+            
+            print(f"JARVIS: {response}")
+            
+            # Speak response (streaming if available)
+            if self.streaming_llm and len(response) > 50:
+                try:
+                    self._speak_streaming(response)
+                except:
+                    # Fallback to normal speech
+                    self._speak(response)
+            else:
+                self._speak(response)
+                
+        except Exception as e:
+            self.error_handler.handle_error(e, context={"audio_data_length": len(audio_data)})
+    
+    def _speak_streaming(self, text: str):
+        """Speak with streaming TTS"""
+        def on_chunk(chunk: str):
+            # Speak chunk immediately if not interrupted
+            if not self.interrupted:
+                try:
+                    audio = self.tts.speak(chunk)
+                    if not self.interrupted:
+                        self.audio_output.play_audio(audio)
+                except:
+                    pass
         
-        print(f"You: {text}")
-        
-        # Get response from orchestrator
-        response = self.orchestrator.process(
-            text,
-            context={"memory": self.context_memory[-5:]}
-        )
-        
-        # Update memory
-        self.context_memory.append({"user": text, "assistant": response})
-        if len(self.context_memory) > config.PiConfig.CONTEXT_MEMORY_SIZE:
-            self.context_memory = self.context_memory[-config.PiConfig.CONTEXT_MEMORY_SIZE:]
-        
-        print(f"JARVIS: {response}")
-        
-        # Speak response
-        self._speak(response)
+        # Stream response and speak chunks
+        try:
+            full_response = self.streaming_llm.stream_with_callback(
+                text,
+                on_chunk
+            )
+        except:
+            # Fallback to normal speech
+            self._speak(text)
     
     def _speak(self, text: str):
         """Speak text with interruption handling"""
