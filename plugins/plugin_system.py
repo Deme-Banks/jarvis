@@ -1,109 +1,131 @@
 """
-Plugin System for JARVIS
+Plugin System - Extensible plugin architecture
 """
 import os
-import importlib.util
-from typing import Dict, List, Optional, Callable
-from abc import ABC, abstractmethod
+import json
+import importlib
+from typing import Dict, List, Optional, Any
+from datetime import datetime
 
 
-class Plugin(ABC):
-    """Base plugin class"""
+class PluginSystem:
+    """Plugin system for JARVIS"""
     
-    @abstractmethod
-    def get_name(self) -> str:
-        """Get plugin name"""
-        pass
+    def __init__(self, plugins_dir: str = "plugins"):
+        self.plugins_dir = plugins_dir
+        self.plugins: Dict[str, Dict] = {}
+        self.loaded_plugins: Dict[str, Any] = {}
+        os.makedirs(plugins_dir, exist_ok=True)
     
-    @abstractmethod
-    def get_version(self) -> str:
-        """Get plugin version"""
-        pass
-    
-    @abstractmethod
-    def handle_command(self, command: str, context: Dict) -> Optional[str]:
-        """Handle command, return response or None"""
-        pass
-    
-    def initialize(self):
-        """Initialize plugin (optional)"""
-        pass
-    
-    def cleanup(self):
-        """Cleanup plugin (optional)"""
-        pass
-
-
-class PluginManager:
-    """Manage plugins"""
-    
-    def __init__(self, plugin_dir: str = "./plugins"):
-        self.plugin_dir = plugin_dir
-        os.makedirs(plugin_dir, exist_ok=True)
-        self.plugins: List[Plugin] = []
-        self._load_plugins()
-    
-    def _load_plugins(self):
-        """Load all plugins from directory"""
-        if not os.path.exists(self.plugin_dir):
-            return
+    def register_plugin(self, plugin_id: str, name: str, version: str,
+                       author: str, description: str, entry_point: str,
+                       commands: List[str] = None) -> Dict:
+        """Register a plugin"""
+        plugin = {
+            "id": plugin_id,
+            "name": name,
+            "version": version,
+            "author": author,
+            "description": description,
+            "entry_point": entry_point,
+            "commands": commands or [],
+            "enabled": True,
+            "registered": datetime.now().isoformat()
+        }
         
-        for filename in os.listdir(self.plugin_dir):
-            if filename.endswith('.py') and not filename.startswith('_'):
-                try:
-                    plugin = self._load_plugin(os.path.join(self.plugin_dir, filename))
-                    if plugin:
-                        plugin.initialize()
-                        self.plugins.append(plugin)
-                except Exception as e:
-                    print(f"Failed to load plugin {filename}: {e}")
+        self.plugins[plugin_id] = plugin
+        self._save_plugins()
+        
+        return {"success": True, "plugin_id": plugin_id}
     
-    def _load_plugin(self, filepath: str) -> Optional[Plugin]:
-        """Load a single plugin"""
-        spec = importlib.util.spec_from_file_location("plugin", filepath)
-        if spec is None or spec.loader is None:
-            return None
+    def load_plugin(self, plugin_id: str) -> Dict:
+        """Load a plugin"""
+        if plugin_id not in self.plugins:
+            return {"error": f"Plugin '{plugin_id}' not registered"}
         
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        plugin = self.plugins[plugin_id]
+        if not plugin.get("enabled", True):
+            return {"error": f"Plugin '{plugin_id}' is disabled"}
         
-        # Look for Plugin class
-        for attr_name in dir(module):
-            attr = getattr(module, attr_name)
-            if (isinstance(attr, type) and 
-                issubclass(attr, Plugin) and 
-                attr != Plugin):
-                return attr()
-        
-        return None
+        try:
+            # Load plugin module
+            entry_point = plugin["entry_point"]
+            module = importlib.import_module(entry_point)
+            
+            # Initialize plugin
+            if hasattr(module, 'initialize'):
+                plugin_instance = module.initialize()
+                self.loaded_plugins[plugin_id] = plugin_instance
+            
+            return {"success": True, "plugin_id": plugin_id}
+        except Exception as e:
+            return {"error": f"Failed to load plugin: {str(e)}"}
     
-    def handle_command(self, command: str, context: Dict) -> Optional[str]:
-        """Try to handle command with plugins"""
-        for plugin in self.plugins:
+    def execute_plugin_command(self, plugin_id: str, command: str,
+                              args: Dict = None) -> Dict:
+        """Execute a plugin command"""
+        if plugin_id not in self.loaded_plugins:
+            return {"error": f"Plugin '{plugin_id}' not loaded"}
+        
+        plugin = self.loaded_plugins[plugin_id]
+        
+        if hasattr(plugin, 'execute'):
             try:
-                response = plugin.handle_command(command, context)
-                if response:
-                    return response
+                result = plugin.execute(command, args or {})
+                return {"success": True, "result": result}
             except Exception as e:
-                print(f"Plugin {plugin.get_name()} error: {e}")
+                return {"error": str(e)}
         
-        return None
+        return {"error": "Plugin does not support execution"}
     
     def list_plugins(self) -> List[Dict]:
-        """List all loaded plugins"""
+        """List all registered plugins"""
         return [
             {
-                'name': plugin.get_name(),
-                'version': plugin.get_version()
+                "id": plugin_id,
+                "name": plugin["name"],
+                "version": plugin["version"],
+                "enabled": plugin.get("enabled", True),
+                "loaded": plugin_id in self.loaded_plugins
             }
-            for plugin in self.plugins
+            for plugin_id, plugin in self.plugins.items()
         ]
     
-    def unload_all(self):
-        """Unload all plugins"""
-        for plugin in self.plugins:
+    def _save_plugins(self):
+        """Save plugin registry"""
+        registry_file = os.path.join(self.plugins_dir, "registry.json")
+        with open(registry_file, 'w') as f:
+            json.dump(self.plugins, f, indent=2)
+    
+    def _load_plugins(self):
+        """Load plugin registry"""
+        registry_file = os.path.join(self.plugins_dir, "registry.json")
+        if os.path.exists(registry_file):
             try:
-                plugin.cleanup()
+                with open(registry_file, 'r') as f:
+                    self.plugins = json.load(f)
             except:
                 pass
-        self.plugins.clear()
+
+
+class PluginBase:
+    """Base class for plugins"""
+    
+    def __init__(self, plugin_id: str, name: str):
+        self.plugin_id = plugin_id
+        self.name = name
+    
+    def initialize(self):
+        """Initialize plugin"""
+        return self
+    
+    def execute(self, command: str, args: Dict) -> Any:
+        """Execute plugin command"""
+        raise NotImplementedError
+    
+    def get_info(self) -> Dict:
+        """Get plugin information"""
+        return {
+            "id": self.plugin_id,
+            "name": self.name
+        }

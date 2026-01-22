@@ -1,32 +1,31 @@
 """
-Example Plugin for JARVIS
+Example Plugin - Template for creating plugins
 """
-from plugins.plugin_system import Plugin
-from typing import Dict, Optional
+from plugins.plugin_system import PluginBase
 
 
-class ExamplePlugin(Plugin):
-    """Example plugin that handles weather queries"""
+class ExamplePlugin(PluginBase):
+    """Example plugin for JARVIS"""
     
-    def get_name(self) -> str:
-        return "Weather Plugin"
-    
-    def get_version(self) -> str:
-        return "1.0.0"
-    
-    def handle_command(self, command: str, context: Dict) -> Optional[str]:
-        """Handle weather-related commands"""
-        command_lower = command.lower()
-        
-        if "weather" in command_lower:
-            return "I don't have weather data configured, but I can help with cybersecurity testing!"
-        
-        return None
+    def __init__(self):
+        super().__init__("example_plugin", "Example Plugin")
     
     def initialize(self):
         """Initialize plugin"""
-        print("Weather Plugin initialized")
+        print(f"Initializing {self.name}")
+        return self
     
-    def cleanup(self):
-        """Cleanup plugin"""
-        print("Weather Plugin cleaned up")
+    def execute(self, command: str, args: Dict) -> Any:
+        """Execute plugin command"""
+        if command == "hello":
+            return {"message": f"Hello from {self.name}!"}
+        elif command == "process":
+            data = args.get("data", "")
+            return {"processed": data.upper()}
+        else:
+            return {"error": f"Unknown command: {command}"}
+
+
+def initialize():
+    """Plugin entry point"""
+    return ExamplePlugin()

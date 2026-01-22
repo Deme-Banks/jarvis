@@ -103,7 +103,30 @@ class CommandAliases:
             'multimodal': 'analyze with multi-modal AI',
             'emotion': 'detect emotion from voice',
             'complete': 'autocomplete command',
-            'sound': 'play sound effect'
+            'sound': 'play sound effect',
+            'schedule': 'schedule task',
+            'quick': 'run quick action',
+            'translate': 'translate text',
+            'gesture': 'detect gesture',
+            'haptic': 'trigger haptic feedback',
+            'wake': 'train wake word',
+            'train': 'train voice recognition',
+            'plugin': 'load plugin',
+            'api': 'call API',
+            'gateway': 'API gateway',
+            'analytics': 'show analytics',
+            'insights': 'get insights',
+            'predict': 'predict next action',
+            'zero': 'zero trust verify',
+            'compliance': 'check compliance',
+            'hardening': 'security hardening',
+            'monitor': 'advanced monitoring',
+            'health': 'system health score',
+            'cli': 'CLI command',
+            'test': 'run tests',
+            'export': 'export data',
+            'backup': 'create backup',
+            'restore': 'restore backup'
         }
         
         for alias, command in defaults.items():

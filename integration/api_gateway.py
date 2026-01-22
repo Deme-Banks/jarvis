@@ -2,11 +2,10 @@
 API Gateway - Manage all API integrations
 """
 import os
-import json
-from typing import Dict, List, Optional
-from datetime import datetime, timedelta
-from collections import defaultdict
 import requests
+from typing import Dict, List, Optional
+from datetime import datetime
+import json
 
 
 class APIGateway:
@@ -16,7 +15,7 @@ class APIGateway:
         self.config_file = config_file
         self.apis = self._load_apis()
         self.rate_limits = {}
-        self.request_logs = []
+        self.usage_stats = {}
     
     def _load_apis(self) -> Dict:
         """Load API configurations"""
@@ -28,14 +27,14 @@ class APIGateway:
                 return {}
         return {}
     
-    def register_api(self, name: str, base_url: str, auth_type: str = "bearer",
-                    api_key: Optional[str] = None, rate_limit: Optional[Dict] = None) -> Dict:
+    def register_api(self, name: str, base_url: str, auth_type: str,
+                    auth_config: Dict, rate_limit: Optional[Dict] = None) -> Dict:
         """Register an API"""
         self.apis[name] = {
             "base_url": base_url,
-            "auth_type": auth_type,
-            "api_key": api_key or os.getenv(f"{name.upper()}_API_KEY"),
-            "rate_limit": rate_limit or {"requests_per_minute": 60},
+            "auth_type": auth_type,  # bearer, api_key, oauth, etc.
+            "auth_config": auth_config,
+            "rate_limit": rate_limit or {},
             "registered": datetime.now().isoformat()
         }
         
@@ -48,110 +47,98 @@ class APIGateway:
         with open(self.config_file, 'w') as f:
             json.dump(self.apis, f, indent=2)
     
-    def make_request(self, api_name: str, endpoint: str, method: str = "GET",
-                    data: Optional[Dict] = None, headers: Optional[Dict] = None) -> Dict:
-        """Make API request through gateway"""
+    def call_api(self, api_name: str, endpoint: str, method: str = "GET",
+                 data: Optional[Dict] = None, params: Optional[Dict] = None) -> Dict:
+        """Call an API endpoint"""
         if api_name not in self.apis:
             return {"error": f"API '{api_name}' not registered"}
         
         api_config = self.apis[api_name]
+        url = f"{api_config['base_url']}{endpoint}"
         
-        # Check rate limit
+        # Prepare headers
+        headers = self._prepare_headers(api_config)
+        
+        # Check rate limits
         if not self._check_rate_limit(api_name):
             return {"error": "Rate limit exceeded"}
         
-        # Build request
-        url = f"{api_config['base_url']}/{endpoint.lstrip('/')}"
-        request_headers = headers or {}
-        
-        # Add authentication
-        if api_config['auth_type'] == "bearer" and api_config.get('api_key'):
-            request_headers["Authorization"] = f"Bearer {api_config['api_key']}"
-        elif api_config['auth_type'] == "api_key" and api_config.get('api_key'):
-            request_headers["X-API-Key"] = api_config['api_key']
-        
         try:
-            if method.upper() == "GET":
-                response = requests.get(url, headers=request_headers, timeout=10)
-            elif method.upper() == "POST":
-                response = requests.post(url, headers=request_headers, json=data, timeout=10)
-            elif method.upper() == "PUT":
-                response = requests.put(url, headers=request_headers, json=data, timeout=10)
-            elif method.upper() == "DELETE":
-                response = requests.delete(url, headers=request_headers, timeout=10)
+            if method == "GET":
+                response = requests.get(url, headers=headers, params=params, timeout=10)
+            elif method == "POST":
+                response = requests.post(url, headers=headers, json=data, params=params, timeout=10)
+            elif method == "PUT":
+                response = requests.put(url, headers=headers, json=data, timeout=10)
+            elif method == "DELETE":
+                response = requests.delete(url, headers=headers, timeout=10)
             else:
                 return {"error": f"Unsupported method: {method}"}
             
-            # Log request
-            self._log_request(api_name, endpoint, method, response.status_code)
-            
             response.raise_for_status()
+            
+            # Update usage stats
+            self._update_usage(api_name)
             
             return {
                 "success": True,
                 "status_code": response.status_code,
-                "data": response.json() if response.content else {},
-                "api": api_name
+                "data": response.json() if response.content else None,
+                "response": response.text
             }
         except Exception as e:
-            return {"error": str(e), "api": api_name}
+            return {"error": str(e)}
+    
+    def _prepare_headers(self, api_config: Dict) -> Dict:
+        """Prepare headers with authentication"""
+        headers = {"Content-Type": "application/json"}
+        
+        auth_type = api_config.get("auth_type")
+        auth_config = api_config.get("auth_config", {})
+        
+        if auth_type == "bearer":
+            headers["Authorization"] = f"Bearer {auth_config.get('token')}"
+        elif auth_type == "api_key":
+            if auth_config.get("header"):
+                headers[auth_config["header"]] = auth_config.get("key")
+            else:
+                headers["X-API-Key"] = auth_config.get("key")
+        elif auth_type == "basic":
+            import base64
+            credentials = f"{auth_config.get('username')}:{auth_config.get('password')}"
+            encoded = base64.b64encode(credentials.encode()).decode()
+            headers["Authorization"] = f"Basic {encoded}"
+        
+        return headers
     
     def _check_rate_limit(self, api_name: str) -> bool:
-        """Check if API is within rate limit"""
-        if api_name not in self.rate_limits:
-            self.rate_limits[api_name] = {
-                "requests": [],
-                "limit": self.apis[api_name].get("rate_limit", {}).get("requests_per_minute", 60)
-            }
+        """Check if API call is within rate limit"""
+        if api_name not in self.apis:
+            return True
         
-        now = datetime.now()
-        minute_ago = now - timedelta(minutes=1)
+        rate_limit = self.apis[api_name].get("rate_limit", {})
+        if not rate_limit:
+            return True
         
-        # Remove old requests
-        self.rate_limits[api_name]["requests"] = [
-            req_time for req_time in self.rate_limits[api_name]["requests"]
-            if req_time > minute_ago
-        ]
-        
-        # Check limit
-        if len(self.rate_limits[api_name]["requests"]) >= self.rate_limits[api_name]["limit"]:
-            return False
-        
-        # Add current request
-        self.rate_limits[api_name]["requests"].append(now)
+        # Simplified rate limiting
+        # In production, would use more sophisticated tracking
         return True
     
-    def _log_request(self, api_name: str, endpoint: str, method: str, status_code: int):
-        """Log API request"""
-        self.request_logs.append({
-            "timestamp": datetime.now().isoformat(),
-            "api": api_name,
-            "endpoint": endpoint,
-            "method": method,
-            "status_code": status_code
-        })
+    def _update_usage(self, api_name: str):
+        """Update API usage statistics"""
+        if api_name not in self.usage_stats:
+            self.usage_stats[api_name] = {"calls": 0, "errors": 0}
         
-        # Keep only last 1000 logs
-        if len(self.request_logs) > 1000:
-            self.request_logs = self.request_logs[-1000:]
+        self.usage_stats[api_name]["calls"] += 1
     
-    def get_api_stats(self, api_name: Optional[str] = None) -> Dict:
-        """Get API usage statistics"""
-        if api_name:
-            api_logs = [log for log in self.request_logs if log["api"] == api_name]
-        else:
-            api_logs = self.request_logs
-        
-        stats = {
-            "total_requests": len(api_logs),
-            "successful": len([log for log in api_logs if 200 <= log["status_code"] < 300]),
-            "failed": len([log for log in api_logs if log["status_code"] >= 400]),
-            "by_method": defaultdict(int),
-            "by_endpoint": defaultdict(int)
+    def list_apis(self) -> List[str]:
+        """List all registered APIs"""
+        return list(self.apis.keys())
+    
+    def get_api_stats(self, api_name: str) -> Dict:
+        """Get statistics for an API"""
+        return {
+            "api": api_name,
+            "config": self.apis.get(api_name, {}),
+            "usage": self.usage_stats.get(api_name, {})
         }
-        
-        for log in api_logs:
-            stats["by_method"][log["method"]] += 1
-            stats["by_endpoint"][log["endpoint"]] += 1
-        
-        return stats

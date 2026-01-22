@@ -1,19 +1,19 @@
 """
-Advanced Analytics and Insights
+Advanced Analytics - Deep insights and predictions
 """
-from typing import Dict, List, Optional
-from collections import Counter, defaultdict
-from datetime import datetime, timedelta
-import json
 import os
+import json
+from typing import Dict, List, Optional
+from datetime import datetime, timedelta
+from collections import Counter, defaultdict
+import statistics
 
 
 class AdvancedAnalytics:
     """Advanced analytics and insights"""
     
-    def __init__(self, data_file: str = "./memory/analytics.json"):
+    def __init__(self, data_file: str = "data/analytics.json"):
         self.data_file = data_file
-        os.makedirs(os.path.dirname(data_file), exist_ok=True)
         self.data = self._load_data()
     
     def _load_data(self) -> Dict:
@@ -23,170 +23,127 @@ class AdvancedAnalytics:
                 with open(self.data_file, 'r') as f:
                     return json.load(f)
             except:
-                return {
-                    'sessions': [],
-                    'commands': [],
-                    'features_used': [],
-                    'errors': [],
-                    'performance': []
-                }
-        return {
-            'sessions': [],
-            'commands': [],
-            'features_used': [],
-            'errors': [],
-            'performance': []
-        }
+                return {"events": [], "metrics": {}}
+        return {"events": [], "metrics": {}}
     
     def _save_data(self):
         """Save analytics data"""
+        os.makedirs(os.path.dirname(self.data_file), exist_ok=True)
         with open(self.data_file, 'w') as f:
             json.dump(self.data, f, indent=2)
     
-    def predict_next_action(self, recent_commands: List[str]) -> List[str]:
-        """Predict next likely actions"""
-        if not recent_commands:
-            return ["create a keylogger", "analyze network", "generate code"]
-        
-        # Analyze patterns
-        last_command = recent_commands[-1].lower()
-        
-        # Common follow-up patterns
-        patterns = {
-            'create': ['deploy', 'test', 'analyze'],
-            'analyze': ['fix', 'improve', 'test'],
-            'test': ['deploy', 'create', 'analyze'],
-            'deploy': ['test', 'monitor', 'verify']
+    def track_event(self, event_type: str, event_data: Dict):
+        """Track an event"""
+        event = {
+            "type": event_type,
+            "data": event_data,
+            "timestamp": datetime.now().isoformat()
         }
         
-        suggestions = []
-        for keyword, follow_ups in patterns.items():
-            if keyword in last_command:
-                suggestions.extend(follow_ups)
-        
-        return suggestions[:5] if suggestions else ["create", "analyze", "test"]
+        self.data["events"].append(event)
+        self._save_data()
     
-    def detect_anomalies(self) -> List[Dict]:
-        """Detect anomalies in usage"""
-        anomalies = []
-        
-        # Check for unusual error rates
-        recent_errors = [e for e in self.data.get('errors', []) 
-                        if datetime.fromisoformat(e['timestamp']) > datetime.now() - timedelta(hours=24)]
-        
-        if len(recent_errors) > 50:  # Threshold
-            anomalies.append({
-                'type': 'high_error_rate',
-                'message': f'Unusually high error rate: {len(recent_errors)} errors in 24h',
-                'severity': 'warning'
-            })
-        
-        # Check for unusual command patterns
-        recent_commands = [c for c in self.data.get('commands', [])
-                         if datetime.fromisoformat(c['timestamp']) > datetime.now() - timedelta(hours=1)]
-        
-        if len(recent_commands) > 100:  # Threshold
-            anomalies.append({
-                'type': 'high_activity',
-                'message': f'Unusually high activity: {len(recent_commands)} commands in 1h',
-                'severity': 'info'
-            })
-        
-        return anomalies
-    
-    def get_trends(self, days: int = 7) -> Dict:
-        """Get usage trends"""
+    def analyze_usage_patterns(self, days: int = 7) -> Dict:
+        """Analyze usage patterns"""
         cutoff = datetime.now() - timedelta(days=days)
-        
-        recent_commands = [
-            c for c in self.data.get('commands', [])
-            if datetime.fromisoformat(c['timestamp']) > cutoff
+        recent_events = [
+            e for e in self.data["events"]
+            if datetime.fromisoformat(e["timestamp"]) >= cutoff
         ]
         
-        # Group by day
-        daily_counts = defaultdict(int)
-        for cmd in recent_commands:
-            date = datetime.fromisoformat(cmd['timestamp']).date()
-            daily_counts[str(date)] += 1
+        # Time patterns
+        hour_counts = Counter()
+        day_counts = Counter()
         
-        # Calculate trend
-        if len(daily_counts) >= 2:
-            dates = sorted(daily_counts.keys())
-            recent_avg = sum(daily_counts[d] for d in dates[-3:]) / 3
-            older_avg = sum(daily_counts[d] for d in dates[:3]) / 3 if len(dates) >= 6 else recent_avg
-            
-            trend = "increasing" if recent_avg > older_avg else "decreasing" if recent_avg < older_avg else "stable"
-        else:
-            trend = "insufficient_data"
+        for event in recent_events:
+            dt = datetime.fromisoformat(event["timestamp"])
+            hour_counts[dt.hour] += 1
+            day_counts[dt.strftime("%A")] += 1
+        
+        # Event type patterns
+        event_type_counts = Counter(e["type"] for e in recent_events)
         
         return {
-            'period_days': days,
-            'total_commands': len(recent_commands),
-            'daily_average': len(recent_commands) / days if days > 0 else 0,
-            'daily_counts': dict(daily_counts),
-            'trend': trend
+            "period_days": days,
+            "total_events": len(recent_events),
+            "hourly_distribution": dict(hour_counts),
+            "daily_distribution": dict(day_counts),
+            "event_types": dict(event_type_counts),
+            "peak_hour": hour_counts.most_common(1)[0][0] if hour_counts else None,
+            "peak_day": day_counts.most_common(1)[0][0] if day_counts else None
         }
     
-    def get_recommendations(self) -> List[str]:
-        """Get personalized recommendations"""
-        recommendations = []
+    def predict_next_action(self, recent_actions: List[str]) -> Optional[str]:
+        """Predict next likely action"""
+        if len(recent_actions) < 2:
+            return None
         
-        # Analyze usage patterns
-        commands = [c['command'] for c in self.data.get('commands', [])]
+        # Analyze patterns
+        patterns = defaultdict(list)
+        for i in range(len(recent_actions) - 1):
+            current = recent_actions[i]
+            next_action = recent_actions[i + 1]
+            patterns[current].append(next_action)
         
-        # Check if user uses certain features
-        if not any('workflow' in c.lower() for c in commands[-20:]):
-            recommendations.append("Try creating workflows to automate repetitive tasks")
+        # Get most likely next action
+        last_action = recent_actions[-1]
+        if last_action in patterns:
+            next_actions = patterns[last_action]
+            most_common = Counter(next_actions).most_common(1)
+            if most_common:
+                return most_common[0][0]
         
-        if not any('schedule' in c.lower() for c in commands[-20:]):
-            recommendations.append("Use scheduled tasks for regular security checks")
-        
-        if not any('ai generate' in c.lower() for c in commands[-20:]):
-            recommendations.append("Try AI-powered code generation for faster development")
-        
-        # Performance recommendations
-        perf_data = self.data.get('performance', [])
-        if perf_data:
-            avg_time = sum(p.get('response_time', 0) for p in perf_data[-10:]) / len(perf_data[-10:])
-            if avg_time > 5.0:
-                recommendations.append("Consider enabling GPU acceleration for faster responses")
-        
-        return recommendations[:5]
+        return None
     
-    def generate_report(self, period_days: int = 7) -> Dict:
-        """Generate comprehensive analytics report"""
-        cutoff = datetime.now() - timedelta(days=period_days)
+    def generate_insights(self) -> List[Dict]:
+        """Generate actionable insights"""
+        insights = []
         
-        recent_data = {
-            'commands': [c for c in self.data.get('commands', [])
-                        if datetime.fromisoformat(c['timestamp']) > cutoff],
-            'errors': [e for e in self.data.get('errors', [])
-                      if datetime.fromisoformat(e['timestamp']) > cutoff],
-            'sessions': [s for s in self.data.get('sessions', [])
-                        if datetime.fromisoformat(s['timestamp']) > cutoff]
-        }
+        # Analyze patterns
+        patterns = self.analyze_usage_patterns()
         
-        # Calculate metrics
-        total_commands = len(recent_data['commands'])
-        successful = sum(1 for c in recent_data['commands'] if c.get('success', False))
-        success_rate = (successful / total_commands * 100) if total_commands > 0 else 0
+        # Peak usage insight
+        if patterns.get("peak_hour") is not None:
+            insights.append({
+                "type": "usage_pattern",
+                "title": "Peak Usage Time",
+                "message": f"Most active during hour {patterns['peak_hour']}:00",
+                "recommendation": f"Consider scheduling important tasks around {patterns['peak_hour']}:00"
+            })
         
-        # Most used features
-        features = Counter([f['feature'] for f in self.data.get('features_used', [])
-                           if datetime.fromisoformat(f['timestamp']) > cutoff])
+        # Event type insight
+        if patterns.get("event_types"):
+            most_common = max(patterns["event_types"].items(), key=lambda x: x[1])
+            insights.append({
+                "type": "activity_focus",
+                "title": "Most Common Activity",
+                "message": f"Most frequent activity: {most_common[0]} ({most_common[1]} times)",
+                "recommendation": f"Consider creating shortcuts for {most_common[0]}"
+            })
         
-        # Most common commands
-        commands = Counter([c['command'][:50] for c in recent_data['commands']])
+        return insights
+    
+    def calculate_metrics(self) -> Dict:
+        """Calculate key metrics"""
+        events = self.data.get("events", [])
+        
+        if not events:
+            return {"error": "No data available"}
+        
+        # Time-based metrics
+        timestamps = [datetime.fromisoformat(e["timestamp"]) for e in events]
+        time_diffs = [
+            (timestamps[i+1] - timestamps[i]).total_seconds()
+            for i in range(len(timestamps) - 1)
+        ]
         
         return {
-            'period': f'{period_days} days',
-            'total_commands': total_commands,
-            'success_rate': f'{success_rate:.1f}%',
-            'total_errors': len(recent_data['errors']),
-            'total_sessions': len(recent_data['sessions']),
-            'top_features': dict(features.most_common(5)),
-            'top_commands': dict(commands.most_common(5)),
-            'trends': self.get_trends(period_days),
-            'anomalies': self.detect_anomalies(),
-            'recommendations': self.get_recommendations()
+            "total_events": len(events),
+            "avg_time_between_events": statistics.mean(time_diffs) if time_diffs else 0,
+            "events_per_day": len(events) / max(1, (timestamps[-1] - timestamps[0]).days) if len(timestamps) > 1 else 0,
+            "unique_event_types": len(set(e["type"] for e in events)),
+            "date_range": {
+                "start": timestamps[0].isoformat() if timestamps else None,
+                "end": timestamps[-1].isoformat() if timestamps else None
+            }
         }

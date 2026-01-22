@@ -11,80 +11,76 @@ from collections import defaultdict
 class VoiceTrainer:
     """Voice recognition training system"""
     
-    def __init__(self, training_data_dir: str = "data/voice_training"):
-        self.training_data_dir = training_data_dir
-        self.training_samples = defaultdict(list)
-        os.makedirs(training_data_dir, exist_ok=True)
+    def __init__(self, training_data_file: str = "data/voice_training.json"):
+        self.training_data_file = training_data_file
+        self.training_data = self._load_training_data()
+        self.corrections = defaultdict(list)
     
-    def add_training_sample(self, audio_file: str, transcript: str,
-                           user_id: str = "default") -> Dict:
-        """Add a training sample"""
-        sample = {
-            "audio_file": audio_file,
-            "transcript": transcript,
-            "timestamp": datetime.now().isoformat(),
-            "user_id": user_id
-        }
-        
-        self.training_samples[user_id].append(sample)
-        
-        # Save to file
-        training_file = os.path.join(self.training_data_dir, f"{user_id}_training.json")
-        samples = []
-        if os.path.exists(training_file):
-            with open(training_file, 'r') as f:
-                samples = json.load(f)
-        
-        samples.append(sample)
-        
-        with open(training_file, 'w') as f:
-            json.dump(samples, f, indent=2)
-        
-        return {
-            "success": True,
-            "samples_count": len(samples),
-            "user_id": user_id
-        }
+    def _load_training_data(self) -> Dict:
+        """Load training data"""
+        if os.path.exists(self.training_data_file):
+            try:
+                with open(self.training_data_file, 'r') as f:
+                    return json.load(f)
+            except:
+                return {"corrections": {}, "patterns": {}}
+        return {"corrections": {}, "patterns": {}}
     
-    def train_model(self, user_id: str = "default") -> Dict:
-        """Train voice recognition model for user"""
-        training_file = os.path.join(self.training_data_dir, f"{user_id}_training.json")
-        
-        if not os.path.exists(training_file):
-            return {"error": f"No training data for user {user_id}"}
-        
-        with open(training_file, 'r') as f:
-            samples = json.load(f)
-        
-        if len(samples) < 10:
-            return {
-                "error": f"Not enough training samples. Need at least 10, have {len(samples)}"
-            }
-        
-        # This would train the actual model
-        # For Vosk, would create user-specific model
-        # For other engines, would use their training APIs
-        
-        return {
-            "success": True,
-            "user_id": user_id,
-            "samples_used": len(samples),
-            "model_path": f"models/voice/{user_id}_model",
-            "accuracy_improvement": "15-25%"
-        }
+    def _save_training_data(self):
+        """Save training data"""
+        os.makedirs(os.path.dirname(self.training_data_file), exist_ok=True)
+        with open(self.training_data_file, 'w') as f:
+            json.dump(self.training_data, f, indent=2)
     
-    def get_training_stats(self, user_id: str = "default") -> Dict:
-        """Get training statistics"""
-        training_file = os.path.join(self.training_data_dir, f"{user_id}_training.json")
+    def add_correction(self, original: str, corrected: str, context: Optional[str] = None):
+        """Add a correction to improve recognition"""
+        if original not in self.training_data["corrections"]:
+            self.training_data["corrections"][original] = []
         
-        if not os.path.exists(training_file):
-            return {"samples": 0, "trained": False}
+        self.training_data["corrections"][original].append({
+            "corrected": corrected,
+            "context": context,
+            "timestamp": datetime.now().isoformat()
+        })
         
-        with open(training_file, 'r') as f:
-            samples = json.load(f)
+        self._save_training_data()
+    
+    def get_correction(self, text: str) -> Optional[str]:
+        """Get correction for text"""
+        # Exact match
+        if text in self.training_data["corrections"]:
+            corrections = self.training_data["corrections"][text]
+            if corrections:
+                # Return most recent correction
+                return corrections[-1]["corrected"]
         
-        return {
-            "samples": len(samples),
-            "trained": os.path.exists(f"models/voice/{user_id}_model"),
-            "last_training": samples[-1]["timestamp"] if samples else None
-        }
+        # Fuzzy match (simplified)
+        text_lower = text.lower()
+        for original, corrections in self.training_data["corrections"].items():
+            if original.lower() in text_lower or text_lower in original.lower():
+                if corrections:
+                    return corrections[-1]["corrected"]
+        
+        return None
+    
+    def learn_pattern(self, pattern: str, replacement: str):
+        """Learn a pattern for automatic correction"""
+        if "patterns" not in self.training_data:
+            self.training_data["patterns"] = {}
+        
+        self.training_data["patterns"][pattern] = replacement
+        self._save_training_data()
+    
+    def apply_corrections(self, text: str) -> str:
+        """Apply learned corrections to text"""
+        # Check for exact corrections
+        correction = self.get_correction(text)
+        if correction:
+            return correction
+        
+        # Apply patterns
+        for pattern, replacement in self.training_data.get("patterns", {}).items():
+            if pattern in text:
+                text = text.replace(pattern, replacement)
+        
+        return text
