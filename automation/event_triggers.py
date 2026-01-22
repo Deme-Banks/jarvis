@@ -6,7 +6,11 @@ import time
 import threading
 from typing import Dict, List, Callable, Optional
 from datetime import datetime
-import psutil
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except:
+    PSUTIL_AVAILABLE = False
 
 
 class EventTriggerSystem:
@@ -45,6 +49,9 @@ class EventTriggerSystem:
     
     def _monitor_loop(self):
         """Monitor loop for system events"""
+        if not PSUTIL_AVAILABLE:
+            return
+        
         last_cpu = 0
         last_memory = 0
         
