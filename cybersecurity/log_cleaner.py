@@ -5,6 +5,7 @@ WARNING: For authorized testing and educational purposes only.
 import os
 import tempfile
 import json
+import shutil
 from typing import Dict, List, Optional
 from datetime import datetime
 
