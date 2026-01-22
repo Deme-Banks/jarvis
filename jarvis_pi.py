@@ -15,6 +15,8 @@ from optimization.lazy_loader import get_lazy
 from utils.error_handler import get_error_handler
 from intelligence.proactive_suggestions import ProactiveSuggestions
 from learning.memory import MemorySystem
+from features.command_history import CommandHistory
+from features.auto_complete import AutoComplete
 import config_pi as config
 from prompts.voice_jarvis import VOICE_JARVIS_PROMPT
 
@@ -85,6 +87,8 @@ class JarvisPi:
         self.error_handler = get_error_handler()
         self.memory = MemorySystem()
         self.proactive = ProactiveSuggestions(self.memory)
+        self.command_history = CommandHistory()
+        self.auto_complete = AutoComplete(self.command_history, self.memory)
         
         # Initialize streaming if enabled
         if config.PiConfig.ENABLE_RESPONSE_CACHE:  # Use as proxy for streaming
@@ -157,18 +161,39 @@ class JarvisPi:
             
             print(f"You: {text}")
             
+            # Check for history/favorites commands
+            if text.lower().startswith("repeat"):
+                # Repeat last command
+                recent = self.command_history.get_recent(1)
+                if recent:
+                    text = recent[0]["command"]
+                    print(f"Repeating: {text}")
+            
+            elif text.lower().startswith("favorite"):
+                # Execute favorite
+                favorites = self.command_history.get_favorites()
+                if favorites:
+                    # Use most recent favorite
+                    text = favorites[-1]["command"]
+                    print(f"Using favorite: {text}")
+            
             # Get response from orchestrator (with error handling)
             try:
                 response = self.orchestrator.process(
                     text,
                     context={"memory": self.context_memory[-5:]}
                 )
+                success = True
             except Exception as e:
                 response = self.error_handler.handle_error(
                     e,
                     context={"user_input": text},
                     retry=True
                 ) or "I encountered an error. Let me try again."
+                success = False
+            
+            # Save to history
+            self.command_history.add(text, response, success)
             
             # Add proactive suggestions if appropriate
             suggestions = self.proactive.suggest_next_action(text)
