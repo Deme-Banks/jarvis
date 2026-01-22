@@ -109,7 +109,38 @@ class JarvisPi:
     def orchestrator(self):
         """Lazy load orchestrator"""
         if self._orchestrator is None:
-            self._orchestrator = PiOrchestrator(self.llm)
+            # Setup cloud LLM manager
+            cloud_manager = CloudLLMManager()
+            
+            # Add OpenAI if API key is set
+            openai_key = os.getenv('OPENAI_API_KEY')
+            if openai_key:
+                openai_llm = OpenAILLM(
+                    api_key=openai_key,
+                    model=getattr(config.PiConfig, 'OPENAI_MODEL', 'gpt-4')
+                )
+                prefer_cloud = getattr(config.PiConfig, 'PREFER_CLOUD_LLM', True)
+                cloud_manager.add_provider('openai', openai_llm, set_default=prefer_cloud)
+            
+            # Add Gemini if API key is set
+            gemini_key = os.getenv('GEMINI_API_KEY')
+            if gemini_key:
+                gemini_llm = GeminiLLM(
+                    api_key=gemini_key,
+                    model=getattr(config.PiConfig, 'GEMINI_MODEL', 'gemini-pro')
+                )
+                prefer_cloud = getattr(config.PiConfig, 'PREFER_CLOUD_LLM', True)
+                if not openai_key:
+                    cloud_manager.add_provider('gemini', gemini_llm, set_default=prefer_cloud)
+                else:
+                    cloud_manager.add_provider('gemini', gemini_llm)
+            
+            prefer_cloud = getattr(config.PiConfig, 'PREFER_CLOUD_LLM', True)
+            self._orchestrator = PiOrchestrator(
+                self.llm, 
+                cloud_manager,
+                prefer_cloud=prefer_cloud
+            )
         return self._orchestrator
         
         # State
