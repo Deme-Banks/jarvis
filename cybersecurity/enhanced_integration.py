@@ -16,6 +16,7 @@ from cybersecurity.advanced_obfuscation import AdvancedObfuscator
 from cybersecurity.malware_builder import MalwareBuilder
 from cybersecurity.advanced_payloads import AdvancedPayloads
 from cybersecurity.ai_malware_generator import AIMalwareGenerator
+from mobile_security import iOSTestingTools, AndroidTestingTools
 from cybersecurity.improvements import ImprovedNLP, EnhancedAuthorization, VSOCReporter
 from prompts.specialists import SECURITY_PRIVACY_PROMPT
 import config_pi as config
@@ -38,6 +39,8 @@ class EnhancedCybersecurityOrchestrator:
         self.malware_builder = MalwareBuilder()
         self.advanced_payloads = AdvancedPayloads()
         self.ai_malware_generator = AIMalwareGenerator()
+        self.ios_tools = iOSTestingTools()
+        self.android_tools = AndroidTestingTools()
         self.nlp = ImprovedNLP()
         self.authorization = EnhancedAuthorization()
         self.reporter = VSOCReporter()
@@ -100,6 +103,10 @@ class EnhancedCybersecurityOrchestrator:
                                                    "encrypted communication", "domain fronting", "lotl", 
                                                    "ransomware", "backdoor"]):
             return self._handle_advanced_payloads(request)
+        
+        # Mobile security tools
+        if any(word in request_lower for word in ["iphone", "ios", "android", "mobile", "phone"]):
+            return self._handle_mobile_security(request)
         
         # Scanning
         if any(word in request_lower for word in ["scan", "nmap", "vulnerability"]):
@@ -376,7 +383,61 @@ class EnhancedCybersecurityOrchestrator:
             return self.base_orchestrator.process(
                 f"{SECURITY_PRIVACY_PROMPT}\n\nUser question: {request}"
             )
-        return "Security module ready. Available: malware creation, DDoS testing, USB deployment, persistence, evasion, anti-detection, process injection, advanced obfuscation, custom malware builder, advanced payloads, AI malware generation, scanning, reporting."
+        return "Security module ready. Available: malware creation, DDoS testing, USB deployment, persistence, evasion, anti-detection, process injection, advanced obfuscation, custom malware builder, advanced payloads, AI malware generation, iOS/Android security tools, scanning, reporting."
+    
+    def _handle_mobile_security(self, request: str) -> str:
+        """Handle mobile security testing requests"""
+        request_lower = request.lower()
+        
+        # iOS tools
+        if "ios" in request_lower or "iphone" in request_lower:
+            if "pin" in request_lower or "brute" in request_lower:
+                result = self.ios_tools.create_pin_brute_force_script()
+                return f"Created iOS PIN brute force script: {result['file']}. {result['warning']}"
+            elif "backup" in request_lower:
+                result = self.ios_tools.create_backup_extractor()
+                return f"Created iOS backup extractor: {result['file']}. {result['warning']}"
+            elif "frida" in request_lower or "hook" in request_lower:
+                # Extract app name
+                import re
+                app_match = re.search(r'app\s+([\w\.-]+)', request_lower)
+                app_name = app_match.group(1) if app_match else "com.example.app"
+                result = self.ios_tools.create_frida_hook_script(app_name)
+                return f"Created iOS Frida hook script: {result['file']}. App: {result['app']}. {result['warning']}"
+            elif "ipa" in request_lower or "analyze" in request_lower:
+                result = self.ios_tools.create_ipa_analyzer()
+                return f"Created iOS IPA analyzer: {result['file']}. {result['warning']}"
+            else:
+                return "iOS tools: PIN brute force, backup extractor, Frida hooks, IPA analyzer"
+        
+        # Android tools
+        elif "android" in request_lower:
+            if "pin" in request_lower or "pattern" in request_lower or "brute" in request_lower:
+                result = self.android_tools.create_pin_pattern_brute_force()
+                return f"Created Android PIN/pattern brute force: {result['file']}. {result['warning']}"
+            elif "apk" in request_lower or "analyze" in request_lower:
+                result = self.android_tools.create_apk_analyzer()
+                return f"Created Android APK analyzer: {result['file']}. {result['warning']}"
+            elif "frida" in request_lower or "hook" in request_lower:
+                import re
+                package_match = re.search(r'package\s+([\w\.]+)', request_lower)
+                package = package_match.group(1) if package_match else "com.example.app"
+                result = self.android_tools.create_frida_hook_script(package)
+                return f"Created Android Frida hook: {result['file']}. Package: {result['package']}. {result['warning']}"
+            elif "adb" in request_lower:
+                exploit_type = "backup"
+                if "backup" in request_lower:
+                    exploit_type = "backup"
+                elif "shell" in request_lower:
+                    exploit_type = "shell"
+                elif "logcat" in request_lower:
+                    exploit_type = "logcat"
+                result = self.android_tools.create_adb_exploit_script(exploit_type)
+                return f"Created Android ADB exploit: {result['file']}. Type: {result['exploit']}. {result['warning']}"
+            else:
+                return "Android tools: PIN/pattern brute force, APK analyzer, Frida hooks, ADB exploits"
+        
+        return "Mobile security tools available for iOS and Android. Specify platform and tool type."
     
     def _handle_ai_malware_generation(self, request: str) -> str:
         """Handle AI-powered malware generation"""
