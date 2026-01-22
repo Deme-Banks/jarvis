@@ -4,6 +4,9 @@ Raspberry Pi Optimized Orchestrator (Local LLM)
 from typing import List, Dict, Optional, Any
 from llm.local_llm import LocalLLM
 from prompts.orchestrator import ORCHESTRATOR_PROMPT
+from optimization.cache import ResponseCache
+from optimization.precomputed import get_precomputed
+import config_pi as config
 from prompts.specialists import (
     VOICE_UX_PROMPT,
     AUTOMATION_ENGINEER_PROMPT,
@@ -20,6 +23,15 @@ class PiOrchestrator:
     
     def __init__(self, local_llm: Optional[LocalLLM] = None):
         self.llm = local_llm or LocalLLM()
+        
+        # Initialize cache if enabled
+        self.cache = None
+        if config.PiConfig.ENABLE_RESPONSE_CACHE:
+            self.cache = ResponseCache(
+                max_size=config.PiConfig.CACHE_SIZE,
+                ttl=config.PiConfig.CACHE_TTL
+            )
+        
         self.agents = {
             "voice_ux": VOICE_UX_PROMPT,
             "automation_engineer": AUTOMATION_ENGINEER_PROMPT,
@@ -67,6 +79,18 @@ class PiOrchestrator:
     
     def process(self, user_request: str, context: Optional[Dict[str, Any]] = None) -> str:
         """Process user request (optimized for Pi)"""
+        # Check pre-computed responses first (fastest)
+        if config.PiConfig.USE_PRECOMPUTED:
+            precomputed = get_precomputed(user_request)
+            if precomputed:
+                return precomputed
+        
+        # Check cache
+        if self.cache:
+            cached = self.cache.get(user_request, context)
+            if cached:
+                return cached
+        
         # For Pi, use direct orchestrator response (faster)
         # Only use agents if explicitly enabled and needed
         
@@ -74,10 +98,16 @@ class PiOrchestrator:
         
         if not agent_names:
             # Direct response
-            return self.llm.chat(
+            response = self.llm.chat(
                 user_request,
                 system_prompt=ORCHESTRATOR_PROMPT
             )
+            
+            # Cache response
+            if self.cache:
+                self.cache.set(user_request, response, context)
+            
+            return response
         
         # Collect agent responses (sequential for Pi)
         agent_responses = {}

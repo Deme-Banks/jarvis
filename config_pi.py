@@ -25,7 +25,14 @@ class PiConfig:
     WAKE_WORD_SENSITIVITY: float = 0.5
     VAD_AGGRESSIVENESS: int = 2
     SAMPLE_RATE: int = 16000  # Lower for Pi
-    CHUNK_SIZE: int = 512  # Smaller chunks for Pi
+    CHUNK_SIZE: int = 256  # Smaller chunks for faster processing
+    
+    # Performance Settings
+    ENABLE_RESPONSE_CACHE: bool = True
+    CACHE_SIZE: int = 1000
+    CACHE_TTL: int = 3600  # 1 hour
+    USE_PRECOMPUTED: bool = True
+    LAZY_LOADING: bool = True
     
     # Audio Settings (Pi optimized)
     INPUT_DEVICE_INDEX: Optional[int] = None

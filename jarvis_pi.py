@@ -9,6 +9,7 @@ from voice.stt_pi import PiSTT, WakeWordDetector
 from voice.tts_pi import PiTTS
 from agents.orchestrator_pi import PiOrchestrator
 from llm.local_llm import LocalLLM
+from optimization.lazy_loader import get_lazy
 import config_pi as config
 from prompts.voice_jarvis import VOICE_JARVIS_PROMPT
 
@@ -17,24 +18,55 @@ class JarvisPi:
     """Main JARVIS system for Raspberry Pi"""
     
     def __init__(self):
-        # Initialize components
-        self.audio_capture = PiAudioCapture()
-        self.audio_output = PiAudioOutput()
-        self.stt = PiSTT()
-        self.tts = PiTTS()
-        self.wake_detector = WakeWordDetector(config.PiConfig.WAKE_WORD)
-        
-        # Initialize LLM
-        self.llm = LocalLLM()
-        if not self.llm.check_available():
-            print("Warning: Local LLM not available")
-            if config.PiConfig.FALLBACK_TO_CLOUD:
-                print("Falling back to cloud...")
-                # Would initialize cloud LLM here
-            else:
-                raise RuntimeError("No LLM available")
-        
-        self.orchestrator = PiOrchestrator(self.llm)
+        # Initialize components (lazy loading if enabled)
+        if config.PiConfig.LAZY_LOADING:
+            # Load only essential components immediately
+            self.audio_capture = PiAudioCapture()
+            self.audio_output = PiAudioOutput()
+            self.stt = PiSTT()
+            self.tts = PiTTS()
+            self.wake_detector = WakeWordDetector(config.PiConfig.WAKE_WORD)
+            
+            # LLM and orchestrator loaded on first use
+            self._llm = None
+            self._orchestrator = None
+        else:
+            # Standard initialization
+            self.audio_capture = PiAudioCapture()
+            self.audio_output = PiAudioOutput()
+            self.stt = PiSTT()
+            self.tts = PiTTS()
+            self.wake_detector = WakeWordDetector(config.PiConfig.WAKE_WORD)
+            
+            # Initialize LLM
+            self.llm = LocalLLM()
+            if not self.llm.check_available():
+                print("Warning: Local LLM not available")
+                if config.PiConfig.FALLBACK_TO_CLOUD:
+                    print("Falling back to cloud...")
+                else:
+                    raise RuntimeError("No LLM available")
+            
+            self.orchestrator = PiOrchestrator(self.llm)
+    
+    @property
+    def llm(self):
+        """Lazy load LLM"""
+        if self._llm is None:
+            self._llm = LocalLLM()
+            if not self._llm.check_available():
+                if config.PiConfig.FALLBACK_TO_CLOUD:
+                    print("Falling back to cloud...")
+                else:
+                    raise RuntimeError("No LLM available")
+        return self._llm
+    
+    @property
+    def orchestrator(self):
+        """Lazy load orchestrator"""
+        if self._orchestrator is None:
+            self._orchestrator = PiOrchestrator(self.llm)
+        return self._orchestrator
         
         # State
         self.is_listening = False
@@ -70,7 +102,7 @@ class JarvisPi:
         """Main listening loop"""
         audio_buffer = b''
         silence_frames = 0
-        max_silence = 10  # frames of silence before processing
+        max_silence = 5  # Reduced for faster response
         
         while True:
             # Read audio chunk
