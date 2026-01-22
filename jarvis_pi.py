@@ -29,6 +29,12 @@ from optimization.semantic_cache import SemanticCache
 from optimization.model_quantization import ModelQuantizer
 from automation.workflow_engine import WorkflowEngine
 from features.multi_language import MultiLanguageSupport
+from integration.slack_bot import SlackBot
+from integration.telegram_bot import TelegramBot
+from monitoring.alerting import AlertingSystem
+from automation.scheduled_tasks import ScheduledTasks
+from ai_coding.code_executor import CodeExecutor
+from ai_coding.web_search import WebSearch
 import config_pi as config
 from prompts.voice_jarvis import VOICE_JARVIS_PROMPT
 
@@ -173,6 +179,12 @@ class JarvisPi:
         self.model_quantizer = ModelQuantizer()
         self.workflow_engine = WorkflowEngine()
         self.multi_language = MultiLanguageSupport()
+        self.slack_bot = SlackBot()
+        self.telegram_bot = TelegramBot()
+        self.alerting = AlertingSystem()
+        self.scheduled_tasks = ScheduledTasks()
+        self.code_executor = CodeExecutor()
+        self.web_search = WebSearch()
         
         # Initialize streaming if enabled
         if config.PiConfig.ENABLE_RESPONSE_CACHE:  # Use as proxy for streaming
