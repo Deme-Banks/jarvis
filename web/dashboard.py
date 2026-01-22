@@ -247,6 +247,29 @@ class JARVISDashboard:
             });
         }
         
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + K: Focus command input
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                document.getElementById('command').focus();
+            }
+            // Ctrl/Cmd + Enter: Execute command
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                executeCommand();
+            }
+            // Escape: Clear response
+            if (e.key === 'Escape') {
+                document.getElementById('response').innerHTML = '';
+            }
+            // Ctrl/Cmd + /: Show shortcuts help
+            if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+                e.preventDefault();
+                alert('Keyboard Shortcuts:\\n\\nCtrl+K: Focus command\\nCtrl+Enter: Execute\\nEscape: Clear\\nCtrl+/: Show this help');
+            }
+        });
+        
         // Load stats on page load
         loadStats();
         setInterval(loadStats, 5000);
