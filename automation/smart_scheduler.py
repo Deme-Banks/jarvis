@@ -1,6 +1,8 @@
 """
-Smart Scheduler - Intelligent task scheduling
+Smart Scheduler - Intelligent task scheduling - Optimized
 """
+from utils.cache_optimizer import SmartCache
+from refactoring.code_deduplication import CommonUtils
 import os
 import json
 from typing import Dict, List, Optional

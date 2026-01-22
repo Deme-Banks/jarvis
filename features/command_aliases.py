@@ -5,6 +5,7 @@ import json
 import os
 from typing import Dict, List, Optional
 from datetime import datetime
+from refactoring.code_deduplication import CommonUtils
 
 
 class CommandAliases:
@@ -19,33 +20,20 @@ class CommandAliases:
     
     def _load_aliases(self) -> Dict:
         """Load aliases"""
-        if os.path.exists(self.aliases_file):
-            try:
-                with open(self.aliases_file, 'r') as f:
-                    data = json.load(f)
-                    return data.get('aliases', {})
-            except:
-                return {}
-        return {}
+        data = CommonUtils.safe_json_load(self.aliases_file, {})
+        return data.get('aliases', {})
     
     def _load_macros(self) -> Dict:
         """Load macros"""
-        if os.path.exists(self.aliases_file):
-            try:
-                with open(self.aliases_file, 'r') as f:
-                    data = json.load(f)
-                    return data.get('macros', {})
-            except:
-                return {}
-        return {}
+        data = CommonUtils.safe_json_load(self.aliases_file, {})
+        return data.get('macros', {})
     
     def _save(self):
         """Save aliases and macros"""
-        with open(self.aliases_file, 'w') as f:
-            json.dump({
-                'aliases': self.aliases,
-                'macros': self.macros
-            }, f, indent=2)
+        CommonUtils.safe_json_save(self.aliases_file, {
+            'aliases': self.aliases,
+            'macros': self.macros
+        })
     
     def _add_default_aliases(self):
         """Add default aliases if not present"""

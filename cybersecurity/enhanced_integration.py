@@ -1,9 +1,11 @@
 """
-Enhanced Cybersecurity Integration with Improvements
+Enhanced Cybersecurity Integration with Improvements - Optimized
 """
 import os
 from typing import Optional, Dict
 from agents.orchestrator_pi import PiOrchestrator
+from utils.cache_optimizer import SmartCache
+from utils.performance_profiler import PerformanceProfiler
 from cybersecurity.enhanced_ddos import EnhancedDDoSTester
 from cybersecurity.enhanced_malware import EnhancedMalwareLab
 from cybersecurity.malware_expansion import ExpandedMalwareLab
@@ -37,6 +39,9 @@ class EnhancedCybersecurityOrchestrator:
     
     def __init__(self, base_orchestrator: Optional[PiOrchestrator] = None):
         self.base_orchestrator = base_orchestrator
+        # Add optimized caching and profiling
+        self.cache = SmartCache()
+        self.profiler = PerformanceProfiler()
         self.malware_lab = EnhancedMalwareLab(isolated_mode=True)
         self.expanded_malware_lab = ExpandedMalwareLab(isolated_mode=True)
         self.ddos_tester = EnhancedDDoSTester(max_threads=50)

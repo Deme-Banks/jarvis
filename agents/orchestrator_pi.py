@@ -11,63 +11,144 @@ import config_pi as config
 
 
 class PiOrchestrator:
-    """Lightweight orchestrator for Raspberry Pi using local LLM + Cloud LLM"""
+    """Lightweight orchestrator for Raspberry Pi using local LLM + Cloud LLM - Optimized"""
     
-    def __init__(self, local_llm: Optional[LocalLLM] = None, 
-                 cloud_llm: Optional[CloudLLMManager] = None,
+    def __init__(self, local_llm: Optional[Any] = None, 
+                 cloud_llm: Optional[Any] = None,
                  prefer_cloud: bool = False):
-        self.local_llm = local_llm or LocalLLM()
-        self.cloud_manager = cloud_llm or CloudLLMManager()
         self.prefer_cloud = prefer_cloud
         
-        # Auto-setup cloud LLMs if available
-        if not self.cloud_manager.list_providers():
-            self.cloud_manager.auto_setup()
+        # Lazy load components - don't initialize until needed
+        self._local_llm = local_llm
+        self._cloud_manager = cloud_llm
+        self._ai_selector = None
+        self._llm = None
+        self._code_generator = None
+        self._code_reader = None
+        self._code_builder = None
+        self._vision_analyzer = None
+        self._document_analyzer = None
+        self._web_search = None
         
-        # Use Smart AI Selector to automatically choose the best AI
-        self.ai_selector = SmartAISelector()
+        # Use optimized SmartCache instead of ResponseCache
+        self.cache = SmartCache() if config.PiConfig.ENABLE_RESPONSE_CACHE else None
         
-        # For backward compatibility, still set self.llm
-        # But we'll use ai_selector for actual queries
-        if self.prefer_cloud and self.cloud_manager.list_providers():
-            try:
-                self.llm = self.cloud_manager.get_provider()
-            except:
-                self.llm = self.local_llm
-        elif self.local_llm.check_available():
-            self.llm = self.local_llm
-        elif self.cloud_manager.list_providers():
-            try:
-                self.llm = self.cloud_manager.get_provider()
-            except:
-                self.llm = self.local_llm
-        else:
-            self.llm = self.local_llm  # Fallback
+        # Performance profiler
+        self.profiler = PerformanceProfiler()
         
-        # Initialize AI coding tools
-        self.code_generator = AICodeGenerator(self.llm)
-        self.code_reader = AICodeReader(self.llm)
-        self.code_builder = AICodeBuilder()
-        self.vision_analyzer = VisionAnalyzer(self.llm)
-        self.document_analyzer = DocumentAnalyzer(self.llm)
-        self.web_search = WebSearch()
-        
-        # Initialize cache if enabled
-        self.cache = None
-        if config.PiConfig.ENABLE_RESPONSE_CACHE:
-            self.cache = ResponseCache(
-                max_size=config.PiConfig.CACHE_SIZE,
-                ttl=config.PiConfig.CACHE_TTL
-            )
-        
-        self.agents = {
-            "voice_ux": VOICE_UX_PROMPT,
-            "automation_engineer": AUTOMATION_ENGINEER_PROMPT,
-            "productivity_chief": PRODUCTIVITY_CHIEF_PROMPT,
-            "security_privacy": SECURITY_PRIVACY_PROMPT,
-            "creative_director": CREATIVE_DIRECTOR_PROMPT,
-            "research_analyst": RESEARCH_ANALYST_PROMPT
-        }
+        # Lazy load prompts only when needed
+        self._prompts_loaded = False
+        self._agents = None
+    
+    @property
+    def local_llm(self):
+        """Lazy load local LLM"""
+        if self._local_llm is None:
+            llm_module = LazyLoader.get("local_llm")
+            self._local_llm = llm_module.LocalLLM()
+        return self._local_llm
+    
+    @property
+    def cloud_manager(self):
+        """Lazy load cloud LLM manager"""
+        if self._cloud_manager is None:
+            llm_module = LazyLoader.get("cloud_llm")
+            self._cloud_manager = llm_module.CloudLLMManager()
+            if not self._cloud_manager.list_providers():
+                self._cloud_manager.auto_setup()
+        return self._cloud_manager
+    
+    @property
+    def ai_selector(self):
+        """Lazy load AI selector"""
+        if self._ai_selector is None:
+            selector_module = LazyLoader.get("smart_ai_selector")
+            self._ai_selector = selector_module.SmartAISelector()
+        return self._ai_selector
+    
+    @property
+    def llm(self):
+        """Lazy load LLM"""
+        if self._llm is None:
+            if self.prefer_cloud and self.cloud_manager.list_providers():
+                try:
+                    self._llm = self.cloud_manager.get_provider()
+                except:
+                    self._llm = self.local_llm
+            elif self.local_llm.check_available():
+                self._llm = self.local_llm
+            elif self.cloud_manager.list_providers():
+                try:
+                    self._llm = self.cloud_manager.get_provider()
+                except:
+                    self._llm = self.local_llm
+            else:
+                self._llm = self.local_llm
+        return self._llm
+    
+    @property
+    def code_generator(self):
+        """Lazy load code generator"""
+        if self._code_generator is None:
+            coding_module = LazyLoader.get("ai_code_generator")
+            self._code_generator = coding_module.AICodeGenerator(self.llm)
+        return self._code_generator
+    
+    @property
+    def code_reader(self):
+        """Lazy load code reader"""
+        if self._code_reader is None:
+            coding_module = LazyLoader.get("ai_code_reader")
+            self._code_reader = coding_module.AICodeReader(self.llm)
+        return self._code_reader
+    
+    @property
+    def code_builder(self):
+        """Lazy load code builder"""
+        if self._code_builder is None:
+            coding_module = LazyLoader.get("ai_code_builder")
+            self._code_builder = coding_module.AICodeBuilder()
+        return self._code_builder
+    
+    @property
+    def vision_analyzer(self):
+        """Lazy load vision analyzer"""
+        if self._vision_analyzer is None:
+            vision_module = LazyLoader.get("vision_analysis")
+            self._vision_analyzer = vision_module.VisionAnalyzer(self.llm)
+        return self._vision_analyzer
+    
+    @property
+    def document_analyzer(self):
+        """Lazy load document analyzer"""
+        if self._document_analyzer is None:
+            doc_module = LazyLoader.get("document_analyzer")
+            self._document_analyzer = doc_module.DocumentAnalyzer(self.llm)
+        return self._document_analyzer
+    
+    @property
+    def web_search(self):
+        """Lazy load web search"""
+        if self._web_search is None:
+            web_module = LazyLoader.get("web_search")
+            self._web_search = web_module.WebSearch()
+        return self._web_search
+    
+    @property
+    def agents(self):
+        """Lazy load agent prompts"""
+        if not self._prompts_loaded:
+            prompts_module = LazyLoader.get("specialists")
+            self._agents = {
+                "voice_ux": prompts_module.VOICE_UX_PROMPT,
+                "automation_engineer": prompts_module.AUTOMATION_ENGINEER_PROMPT,
+                "productivity_chief": prompts_module.PRODUCTIVITY_CHIEF_PROMPT,
+                "security_privacy": prompts_module.SECURITY_PRIVACY_PROMPT,
+                "creative_director": prompts_module.CREATIVE_DIRECTOR_PROMPT,
+                "research_analyst": prompts_module.RESEARCH_ANALYST_PROMPT
+            }
+            self._prompts_loaded = True
+        return self._agents
     
     def _call_agent(self, agent_name: str, task: str) -> str:
         """Call a specialist agent (simplified for Pi)"""
@@ -131,9 +212,10 @@ class PiOrchestrator:
         
         if not agent_names:
             # Use Smart AI Selector to get the best response
+            orchestrator_prompt = LazyLoader.get("orchestrator_prompt").ORCHESTRATOR_PROMPT
             result = self.ai_selector.get_best_response(
                 user_request,
-                system_prompt=ORCHESTRATOR_PROMPT,
+                system_prompt=orchestrator_prompt,
                 context=context
             )
             
@@ -141,22 +223,26 @@ class PiOrchestrator:
                 response = result["response"]
                 provider_used = result.get("provider", "unknown")
                 
-                # Cache response
+                # Cache response with optimized cache
                 if self.cache:
-                    self.cache.set(user_request, response, context)
+                    self.cache.set(user_request, response)
+                    # Also cache semantically
+                    self.cache.set_semantic(user_request, response)
                 
                 # Optionally include provider info in response (for transparency)
                 # For voice responses, we'll just return the response
                 return response
             else:
                 # Fallback to direct LLM call if selector fails
+                orchestrator_prompt = LazyLoader.get("orchestrator_prompt").ORCHESTRATOR_PROMPT
                 response = self.llm.chat(
                     user_request,
-                    system_prompt=ORCHESTRATOR_PROMPT
+                    system_prompt=orchestrator_prompt
                 )
                 
                 if self.cache:
-                    self.cache.set(user_request, response, context)
+                    self.cache.set(user_request, response)
+                    self.cache.set_semantic(user_request, response)
                 
                 return response
         
@@ -174,9 +260,10 @@ Agent insights:
 Provide a concise voice-optimized response."""
         
         # Use Smart AI Selector for synthesis too
+        orchestrator_prompt = LazyLoader.get("orchestrator_prompt").ORCHESTRATOR_PROMPT
         result = self.ai_selector.get_best_response(
             synthesis,
-            system_prompt=ORCHESTRATOR_PROMPT,
+            system_prompt=orchestrator_prompt,
             context=context
         )
         
@@ -184,13 +271,15 @@ Provide a concise voice-optimized response."""
             response = result["response"]
         else:
             # Fallback
+            orchestrator_prompt = LazyLoader.get("orchestrator_prompt").ORCHESTRATOR_PROMPT
             response = self.llm.chat(
                 synthesis,
-                system_prompt=ORCHESTRATOR_PROMPT
+                system_prompt=orchestrator_prompt
             )
         
-        # Cache response
+        # Cache response with optimized cache
         if self.cache:
-            self.cache.set(user_request, response, context)
+            self.cache.set(user_request, response)
+            self.cache.set_semantic(user_request, response)
         
         return response

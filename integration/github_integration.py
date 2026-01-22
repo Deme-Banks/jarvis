@@ -13,6 +13,9 @@ class GitHubIntegration:
     """GitHub integration for JARVIS"""
     
     def __init__(self, token: Optional[str] = None):
+        # Add optimized caching
+        self.cache = SmartCache()
+        self.profiler = PerformanceProfiler()
         self.token = token or os.getenv("GITHUB_TOKEN")
         self.base_url = "https://api.github.com"
         self.headers = {

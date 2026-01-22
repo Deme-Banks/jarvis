@@ -13,6 +13,9 @@ class AdvancedMonitor:
     """Advanced system monitoring"""
     
     def __init__(self):
+        # Add optimized caching
+        self.cache = SmartCache()
+        self.profiler = PerformanceProfiler()
         self.metrics = {}
         self.alerts = []
         self.alert_callbacks: List[Callable] = []
