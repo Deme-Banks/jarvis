@@ -122,7 +122,13 @@ Agent insights:
 
 Provide a concise voice-optimized response."""
         
-        return self.llm.chat(
+        response = self.llm.chat(
             synthesis,
             system_prompt=ORCHESTRATOR_PROMPT
         )
+        
+        # Cache response
+        if self.cache:
+            self.cache.set(user_request, response, context)
+        
+        return response
