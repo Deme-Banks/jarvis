@@ -48,6 +48,34 @@ class CommandAliases:
             }, f, indent=2)
     
     def _add_default_aliases(self):
+        """Add default aliases if not present"""
+        default_aliases = {
+            "kl": "create keylogger",
+            "rs": "create reverse shell",
+            "ddos": "run ddos test",
+            "scan": "scan network",
+            "usb": "deploy payload to usb",
+            "sysinfo": "get system information",
+            "perf": "show performance metrics",
+            "ai code": "generate code",
+            "ai malware": "AI generate malware",
+            "ios crack": "create iOS PIN brute force",
+            "android crack": "create Android PIN brute force",
+            "img": "generate image",
+            "video": "analyze video",
+            "github": "github commit",
+            "jira": "jira create issue",
+            "cal": "calendar create event",
+            "pt": "run penetration test",
+            "threat": "check threat intelligence",
+            "theme": "change theme"
+        }
+        
+        for alias, command in default_aliases.items():
+            if alias not in self.aliases:
+                self.aliases[alias] = command
+        
+        self._save()
         """Add default aliases"""
         defaults = {
             'kl': 'create a keylogger',
