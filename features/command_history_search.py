@@ -5,6 +5,7 @@ import os
 import json
 from typing import List, Dict, Optional
 from datetime import datetime
+from refactoring.code_deduplication import CommonUtils
 
 
 class CommandHistorySearch:
@@ -58,17 +59,8 @@ class CommandHistorySearch:
     
     def _load_history(self):
         """Load history from file"""
-        if os.path.exists(self.history_file):
-            try:
-                with open(self.history_file, 'r') as f:
-                    self.history = json.load(f)
-            except:
-                self.history = []
+        self.history = CommonUtils.safe_json_load(self.history_file, [])
     
     def _save_history(self):
         """Save history to file"""
-        try:
-            with open(self.history_file, 'w') as f:
-                json.dump(self.history, f, indent=2)
-        except Exception as e:
-            print(f"Error saving history: {e}")
+        CommonUtils.safe_json_save(self.history_file, self.history)

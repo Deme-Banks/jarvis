@@ -6,6 +6,7 @@ import json
 import importlib
 from typing import Dict, List, Optional, Any
 from datetime import datetime
+from refactoring.code_deduplication import CommonUtils
 
 
 class PluginSystem:
@@ -94,18 +95,12 @@ class PluginSystem:
     def _save_plugins(self):
         """Save plugin registry"""
         registry_file = os.path.join(self.plugins_dir, "registry.json")
-        with open(registry_file, 'w') as f:
-            json.dump(self.plugins, f, indent=2)
+        CommonUtils.safe_json_save(registry_file, self.plugins)
     
     def _load_plugins(self):
         """Load plugin registry"""
         registry_file = os.path.join(self.plugins_dir, "registry.json")
-        if os.path.exists(registry_file):
-            try:
-                with open(registry_file, 'r') as f:
-                    self.plugins = json.load(f)
-            except:
-                pass
+        self.plugins = CommonUtils.safe_json_load(registry_file, {})
 
 
 class PluginBase:

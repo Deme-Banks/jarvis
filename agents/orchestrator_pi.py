@@ -1,26 +1,12 @@
 """
-Raspberry Pi Optimized Orchestrator (Local LLM)
+Raspberry Pi Optimized Orchestrator (Local LLM) - Optimized with lazy loading
 """
 from typing import List, Dict, Optional, Any
-from llm.local_llm import LocalLLM
-from llm.cloud_llm import CloudLLMManager
-from llm.smart_ai_selector import SmartAISelector
+from utils.lazy_loader import LazyLoader
+from utils.cache_optimizer import SmartCache
+from utils.performance_profiler import PerformanceProfiler
 from prompts.orchestrator import ORCHESTRATOR_PROMPT
-from optimization.cache import ResponseCache
 from optimization.precomputed import get_precomputed
-import config_pi as config
-from prompts.specialists import (
-    VOICE_UX_PROMPT,
-    AUTOMATION_ENGINEER_PROMPT,
-    PRODUCTIVITY_CHIEF_PROMPT,
-    SECURITY_PRIVACY_PROMPT,
-    CREATIVE_DIRECTOR_PROMPT,
-    RESEARCH_ANALYST_PROMPT
-)
-from ai_coding import AICodeGenerator, AICodeReader, AICodeBuilder
-from ai_coding.vision_analysis import VisionAnalyzer
-from ai_coding.document_analyzer import DocumentAnalyzer
-from ai_coding.web_search import WebSearch
 import config_pi as config
 
 

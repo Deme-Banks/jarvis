@@ -2,6 +2,7 @@
 Async Optimizer - Optimize async operations
 """
 import asyncio
+import time
 from typing import List, Callable, Any, Coroutine
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 import functools
