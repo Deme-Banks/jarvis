@@ -25,7 +25,10 @@ from analytics.performance_monitor import PerformanceMonitor
 from analytics.usage_analytics import UsageAnalytics
 from plugins.plugin_system import PluginManager
 from optimization.gpu_acceleration import GPUAccelerator
+from optimization.semantic_cache import SemanticCache
+from optimization.model_quantization import ModelQuantizer
 from automation.workflow_engine import WorkflowEngine
+from features.multi_language import MultiLanguageSupport
 import config_pi as config
 from prompts.voice_jarvis import VOICE_JARVIS_PROMPT
 
@@ -166,7 +169,10 @@ class JarvisPi:
         self.usage_analytics = UsageAnalytics()
         self.plugin_manager = PluginManager()
         self.gpu_accelerator = GPUAccelerator()
+        self.semantic_cache = SemanticCache()
+        self.model_quantizer = ModelQuantizer()
         self.workflow_engine = WorkflowEngine()
+        self.multi_language = MultiLanguageSupport()
         
         # Initialize streaming if enabled
         if config.PiConfig.ENABLE_RESPONSE_CACHE:  # Use as proxy for streaming
