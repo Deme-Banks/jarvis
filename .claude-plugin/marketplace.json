@@ -1,0 +1,10 @@
+{
+  "name": "everything-claude-code",
+  "displayName": "Everything Claude Code",
+  "description": "Complete Claude Code configuration collection - agents, skills, hooks, commands, rules, MCPs. Battle-tested configs from an Anthropic hackathon winner.",
+  "version": "1.0.0",
+  "author": "affaan-m",
+  "repository": "https://github.com/affaan-m/everything-claude-code",
+  "categories": ["productivity", "developer-tools", "ai-agents"],
+  "tags": ["claude", "agents", "skills", "hooks", "commands", "rules", "mcp"]
+}

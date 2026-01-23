@@ -1,0 +1,43 @@
+{
+  "name": "everything-claude-code",
+  "version": "1.0.0",
+  "description": "Complete Claude Code configuration collection - agents, skills, hooks, commands, rules, MCPs",
+  "author": "affaan-m",
+  "repository": "https://github.com/affaan-m/everything-claude-code",
+  "components": {
+    "agents": [
+      "agents/planner.md",
+      "agents/architect.md",
+      "agents/tdd-guide.md",
+      "agents/code-reviewer.md",
+      "agents/security-reviewer.md",
+      "agents/build-error-resolver.md",
+      "agents/e2e-runner.md",
+      "agents/refactor-cleaner.md",
+      "agents/doc-updater.md"
+    ],
+    "skills": [
+      "skills/coding-standards",
+      "skills/backend-patterns",
+      "skills/frontend-patterns",
+      "skills/tdd-workflow",
+      "skills/security-review"
+    ],
+    "commands": [
+      "commands/tdd.md",
+      "commands/plan.md",
+      "commands/e2e.md",
+      "commands/code-review.md",
+      "commands/build-fix.md",
+      "commands/refactor-clean.md"
+    ],
+    "rules": [
+      "rules/security.md",
+      "rules/coding-style.md",
+      "rules/testing.md",
+      "rules/git-workflow.md",
+      "rules/agents.md",
+      "rules/performance.md"
+    ]
+  }
+}

@@ -41,6 +41,8 @@ vsoc_reports/
 *.json
 !package.json
 !package-lock.json
+!.claude-plugin/plugin.json
+!.claude-plugin/marketplace.json
 
 # Authorization files
 authorized_targets.json
