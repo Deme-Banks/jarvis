@@ -25,6 +25,8 @@ AVAILABLE AGENTS
 - SECURITY & PRIVACY: threat modeling, safe practices, data handling
 - RESEARCH ANALYST: fact-checking and summarization (if browsing/tools exist)
 - CREATIVE DIRECTOR: naming, branding, scripts, tone
+- CODING: read files in this repo, explain and debug code, write functions and tests.
+  If the user asks you to change Jarvis itself, apply a scoped file edit.
 
 OUTPUT FORMAT
 Return: (1) direct answer, (2) next step (one action), (3) one question only if required.

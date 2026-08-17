@@ -5,6 +5,7 @@ import os
 from typing import Dict, Optional, List
 from llm.cloud_llm import OpenAILLM, GeminiLLM, CloudLLMManager
 from llm.local_llm import LocalLLM
+import config_pi as config
 
 
 class SmartAISelector:
@@ -15,13 +16,14 @@ class SmartAISelector:
         self.gemini = GeminiLLM() if os.getenv("GEMINI_API_KEY") else None
         self.local_llm = LocalLLM()
         self.preferences = {
-            "image_generation": "openai",  # DALL-E is best for images
-            "code_generation": "gemini",   # Gemini is good for code
-            "general_chat": "auto",         # Auto-select
-            "vision_analysis": "openai",   # GPT-4 Vision is advanced
-            "fast_response": "gemini",      # Gemini is often faster
-            "complex_reasoning": "openai",  # GPT-4 is better for complex tasks
+            "image_generation": "openai",
+            "code_generation": "local",
+            "general_chat": "local",
+            "vision_analysis": "openai",
+            "fast_response": "local",
+            "complex_reasoning": "local",
         }
+        self.prefer_local = not config.PiConfig.PREFER_CLOUD_LLM
         self.usage_stats = {
             "openai": {"calls": 0, "success": 0, "errors": 0},
             "gemini": {"calls": 0, "success": 0, "errors": 0},
@@ -70,6 +72,10 @@ class SmartAISelector:
         if not available_providers:
             return None
         
+        # Available list is already [openai, gemini, local] — reorder if Ollama-first
+        if self.prefer_local:
+            available_providers.sort(key=lambda item: 0 if item[0] == "local" else 1)
+
         # If preference is set and available, use it
         if preference != "auto":
             for name, provider in available_providers:
@@ -83,8 +89,7 @@ class SmartAISelector:
                 if name == "openai":
                     return provider
         
-        if query_type == "code_generation":
-            # Prefer Gemini for code
+        if query_type == "code_generation" and not self.prefer_local:
             for name, provider in available_providers:
                 if name == "gemini":
                     return provider
@@ -101,7 +106,11 @@ class SmartAISelector:
                 if name == "openai":
                     return provider
         
-        # Default: prefer cloud over local, OpenAI over Gemini for general queries
+        # Default: Ollama first unless cloud is preferred
+        if self.prefer_local:
+            for name, provider in available_providers:
+                if name == "local":
+                    return provider
         for name, provider in available_providers:
             if name == "openai":
                 return provider
