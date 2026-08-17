@@ -12,10 +12,14 @@ Jarvis uses **Ollama** as the default brain. No API key is required.
 
 ```bat
 ollama serve
-ollama pull llama3.2
+ollama pull qwen2.5-coder:3b
 ```
 
-`llama3.2` is the default in `config_pi.py`. Other local options: `llama3.1:8b`, `phi3`, `gemma2:2b`.
+`qwen2.5-coder:3b` is the default (good at code). `llama3.2` is also pulled on this machine for general chat.
+
+```powershell
+$env:OLLAMA_MODEL = "llama3.2"
+```
 
 ## Point Jarvis at it
 
@@ -25,7 +29,7 @@ Copy `.env.example` to `.env` if you do not already have one. The local path wor
 JARVIS_PREFER_CLOUD=false
 JARVIS_FALLBACK_CLOUD=true
 OLLAMA_HOST=http://localhost:11434
-OLLAMA_MODEL=llama3.2
+OLLAMA_MODEL=qwen2.5-coder:3b
 ```
 
 ## Start Jarvis (Windows, no mic)

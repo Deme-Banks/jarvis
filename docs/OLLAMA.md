@@ -45,7 +45,8 @@ Voice mode (`-Mode pi`) still needs PyAudio. Text mode does not.
 | Variable | Default | Meaning |
 |---|---|---|
 | `OLLAMA_HOST` | `http://localhost:11434` | Ollama server |
-| `OLLAMA_MODEL` | `llama3.2` | Model name |
+| `OLLAMA_MODEL` | `qwen2.5-coder:3b` | Model name (`llama3.2` is pulled too) |
 | `JARVIS_PREFER_CLOUD` | `false` | Set `true` to use API keys first |
 | `JARVIS_MAX_TOKENS` | `800` | Reply length |
 | `JARVIS_AGENT_TIMEOUT` | `90` | HTTP timeout seconds |
+| `JARVIS_LLM_TIMEOUT` | `120` | Ollama chat timeout seconds |

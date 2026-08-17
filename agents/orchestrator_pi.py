@@ -214,7 +214,7 @@ class PiOrchestrator:
         
         # Check cache
         if self.cache:
-            cached = self.cache.get(user_request, context)
+            cached = self.cache.get(user_request)
             if cached:
                 return cached
         
