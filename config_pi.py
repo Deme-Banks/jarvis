@@ -50,7 +50,7 @@ class PiConfig:
     
     # STT (Speech-to-Text) Settings
     STT_ENGINE: str = "vosk"  # Offline, lightweight
-    VOSK_MODEL_PATH: str = "./models/vosk-model-small-en-us-0.22"  # ~40MB
+    VOSK_MODEL_PATH: str = "./models/vosk-model-small-en-us-0.15"  # ~40MB
     # Alternative: "whisper" (heavier but more accurate)
     
     # TTS (Text-to-Speech) Settings
