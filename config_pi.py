@@ -54,8 +54,8 @@ class PiConfig:
     # Alternative: "whisper" (heavier but more accurate)
     
     # TTS (Text-to-Speech) Settings
-    TTS_ENGINE: str = "piper"  # Fast, local TTS
-    # Alternatives: "pyttsx3", "espeak" (built-in on Pi)
+    TTS_ENGINE: str = os.getenv("JARVIS_TTS_ENGINE", "pyttsx3")
+    # Alternatives: "piper", "espeak" (built-in on Pi)
     PIPER_MODEL_PATH: str = "./models/piper"
     TTS_RATE: int = 150
     
