@@ -1,6 +1,7 @@
 """One ask() path used by text and voice."""
 from __future__ import annotations
 
+from core.skills import try_skill
 from agents.orchestrator_pi import PiOrchestrator
 
 
@@ -14,7 +15,8 @@ class JarvisSession:
         if not text:
             return ""
         try:
-            reply = self.orchestrator.process(text)
+            skill = try_skill(text)
+            reply = skill if skill else self.orchestrator.process(text)
         except Exception as exc:
             reply = f"Something went wrong: {exc}"
         self.memory.append({"user": text, "assistant": reply})

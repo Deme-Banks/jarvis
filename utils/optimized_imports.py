@@ -24,4 +24,5 @@ LazyLoader.register("audio", "voice.audio_pi")
 
 # Prompt Modules
 LazyLoader.register("orchestrator_prompt", "prompts.orchestrator")
+LazyLoader.register("voice_jarvis_prompt", "prompts.voice_jarvis")
 LazyLoader.register("specialists", "prompts.specialists")

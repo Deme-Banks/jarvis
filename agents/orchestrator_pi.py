@@ -5,7 +5,7 @@ from typing import List, Dict, Optional, Any
 from utils.lazy_loader import LazyLoader
 from utils.cache_optimizer import SmartCache
 from utils.performance_profiler import PerformanceProfiler
-from prompts.orchestrator import ORCHESTRATOR_PROMPT
+from prompts.voice_jarvis import VOICE_JARVIS_PROMPT
 from optimization.precomputed import get_precomputed
 import config_pi as config
 import utils.optimized_imports  # noqa: F401
@@ -230,10 +230,9 @@ class PiOrchestrator:
         
         if not agent_names:
             # Use Smart AI Selector to get the best response
-            orchestrator_prompt = LazyLoader.get("orchestrator_prompt").ORCHESTRATOR_PROMPT
             result = self.ai_selector.get_best_response(
                 user_request,
-                system_prompt=orchestrator_prompt,
+                system_prompt=VOICE_JARVIS_PROMPT,
                 context=context
             )
             
@@ -252,10 +251,9 @@ class PiOrchestrator:
                 return response
             else:
                 # Fallback to direct LLM call if selector fails
-                orchestrator_prompt = LazyLoader.get("orchestrator_prompt").ORCHESTRATOR_PROMPT
                 response = self.llm.chat(
                     user_request,
-                    system_prompt=orchestrator_prompt
+                    system_prompt=VOICE_JARVIS_PROMPT
                 )
                 
                 if self.cache:
@@ -278,10 +276,9 @@ Agent insights:
 Provide a concise voice-optimized response."""
         
         # Use Smart AI Selector for synthesis too
-        orchestrator_prompt = LazyLoader.get("orchestrator_prompt").ORCHESTRATOR_PROMPT
         result = self.ai_selector.get_best_response(
             synthesis,
-            system_prompt=orchestrator_prompt,
+            system_prompt=VOICE_JARVIS_PROMPT,
             context=context
         )
         
@@ -289,10 +286,9 @@ Provide a concise voice-optimized response."""
             response = result["response"]
         else:
             # Fallback
-            orchestrator_prompt = LazyLoader.get("orchestrator_prompt").ORCHESTRATOR_PROMPT
             response = self.llm.chat(
                 synthesis,
-                system_prompt=orchestrator_prompt
+                system_prompt=VOICE_JARVIS_PROMPT
             )
         
         # Cache response with optimized cache

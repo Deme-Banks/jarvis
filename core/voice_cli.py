@@ -1,5 +1,7 @@
-"""Mic loop: wake word, Vosk, Ollama, Windows TTS."""
+"""Mic loop: wake word, stay-awake window, Vosk, Ollama, Windows TTS."""
 from __future__ import annotations
+
+import time
 
 import numpy as np
 
@@ -14,6 +16,8 @@ WAKE = config.PiConfig.WAKE_WORD.lower()
 MIN_UTTERANCE_BYTES = int(config.PiConfig.SAMPLE_RATE * 2 * 0.4)
 SILENCE_FRAMES_END = 25
 ENERGY_SPEECH = 400.0
+AWAKE_SECONDS = 45.0
+STAND_DOWN = ("stand down", "stand by", "that's all", "thats all", "go to sleep", "dismissed")
 
 
 def _is_loud(chunk: bytes) -> bool:
@@ -31,7 +35,7 @@ class VoiceJarvis:
         self.stt = PiSTT()
         self.tts = PiTTS()
         self.session: JarvisSession | None = None
-        self.awake = False
+        self.awake_until = 0.0
         self.is_speaking = False
 
     def start(self) -> None:
@@ -41,7 +45,7 @@ class VoiceJarvis:
             return
         self.session = JarvisSession(boot_orchestrator())
         self.audio_capture.start_stream()
-        print(f"Ready. Say '{config.PiConfig.WAKE_WORD}' then your command.")
+        print(f"Ready. Say '{config.PiConfig.WAKE_WORD}', then the command. I'll keep listening for {int(AWAKE_SECONDS)} seconds.")
         print("Press Ctrl+C to exit")
         try:
             self._listen_loop()
@@ -82,21 +86,31 @@ class VoiceJarvis:
 
         lowered = text.lower()
         print(f"You: {text}")
+        now = time.monotonic()
+        listening = now < self.awake_until
 
-        if not self.awake:
+        if not listening:
             if WAKE not in lowered:
                 return
-            self.awake = True
             after = lowered.split(WAKE, 1)[-1].strip(" ,.-")
+            self.awake_until = now + AWAKE_SECONDS
             if len(after) < 2:
-                self._speak("Yes?")
+                self._speak("At your service.")
                 return
             text = after
+            lowered = text.lower()
+
+        if any(p in lowered for p in STAND_DOWN):
+            self.awake_until = 0.0
+            reply = "Standing by, sir."
+            print(f"JARVIS: {reply}")
+            self._speak(reply)
+            return
 
         reply = self.session.ask(text)
         print(f"JARVIS: {reply}")
         self._speak(reply)
-        self.awake = False
+        self.awake_until = time.monotonic() + AWAKE_SECONDS
 
     def _speak(self, text: str) -> None:
         self.is_speaking = True

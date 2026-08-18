@@ -18,12 +18,14 @@ class PrecomputedResponses:
             "greeting": "Hello. I'm JARVIS. I can talk, write code, and edit files in this project when you ask.",
             "goodbye": "Goodbye. Call if you need me.",
             "thanks": "You're welcome.",
-            "what can you do": "I run locally on Ollama. I can answer questions, explain and write code, and update files in this repo when you tell me to.",
-            "help": "Ask a question, say write a Python function, or tell me to edit a file in this project.",
+            "what can you do": "I can talk, write code, check this PC, search the web, open apps, take screenshots, and take notes. Say Jarvis, then the command.",
+            "help": "Try: what time is it, system status, screenshot, open notepad, search Python, or write a function.",
             "status": "All systems operational. Ready for commands.",
+            "who are you": "J.A.R.V.I.S. — Just A Rather Very Intelligent System. Online, and at your service.",
+            "capabilities": "Chat, coding, system status, weather, web search, allowlisted apps, screenshots, notes, and voice.",
             "time": self._get_time_response(),
-            "who are you": "I'm JARVIS, your personal local assistant. I use Ollama on this machine and I can help with code.",
-            "capabilities": "Chat, coding help, scoped edits to this repo, and optional voice via the microphone.",
+            "who are you": "J.A.R.V.I.S. — Just A Rather Very Intelligent System. Online, and at your service.",
+            "capabilities": "Chat, coding, system status, weather, web search, allowlisted apps, screenshots, notes, and voice.",
             "learning": "I keep recent conversation context in this session. For code, name the file you want explained.",
         }
 
