@@ -34,6 +34,11 @@ class PrecomputedResponses:
         return f"The current time is {now.strftime('%I:%M %p')} on {now.strftime('%B %d, %Y')}."
 
     def get(self, query: str) -> Optional[str]:
+        from core.identity import canned_reply
+
+        ident = canned_reply(query)
+        if ident:
+            return ident
         query_lower = query.lower().strip().rstrip("!?.,")
         if query_lower in self.responses:
             return self.responses[query_lower]

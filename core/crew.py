@@ -10,7 +10,7 @@ import re
 from typing import Any, Optional
 
 from ai_coding.code_brain import CodeBrain, is_coding_request
-from prompts.voice_jarvis import VOICE_JARVIS_PROMPT
+from core.identity import live_prompt
 
 THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
 
@@ -67,7 +67,7 @@ SPECIALIST_BRIEF = (
 )
 
 SYNTH_TAIL = """
-A specialist drafted notes for you. Answer the user as JARVIS.
+A specialist drafted notes for you. Answer the user as JARVIS — one mind, your identity, not a summary bot.
 Keep facts, numbers, and every markdown code fence unchanged.
 Do not name Qwen, DeepSeek, Mistral, Ollama, or specialists unless asked how you work.
 """
@@ -210,8 +210,8 @@ class JarvisCrew:
             return msg
         self.preferred_conductor = getattr(self.llm, "model_name", tag)
         return (
-            f"Switched brain to {self.preferred_conductor}. Ready. "
-            "You still talk to JARVIS; specialists stay in the background."
+            f"Still JARVIS. I'll lean on {self.preferred_conductor} as a faculty. "
+            "I remain one mind."
         )
 
     def reply(self, user_request: str, context: Optional[list] = None) -> str:
@@ -239,7 +239,7 @@ class JarvisCrew:
             self._ask(
                 conductor,
                 user_request,
-                system=VOICE_JARVIS_PROMPT,
+                system=live_prompt(),
                 context=context,
             )
         )
@@ -278,7 +278,7 @@ class JarvisCrew:
             self._ask(
                 self.conductor_tag(),
                 prompt,
-                system=VOICE_JARVIS_PROMPT + SYNTH_TAIL + extra,
+                system=live_prompt() + SYNTH_TAIL + extra,
                 context=context,
             )
         )

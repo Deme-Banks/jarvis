@@ -55,6 +55,12 @@ class JarvisSession:
             self.pending_edit = pending
             return message
 
+        from core.identity import handle_turn
+
+        ident = handle_turn(text)
+        if ident:
+            return ident
+
         model_reply = self._maybe_switch_model(text)
         if model_reply:
             return model_reply
