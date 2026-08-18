@@ -53,11 +53,14 @@ class PiConfig:
     VOSK_MODEL_PATH: str = "./models/vosk-model-small-en-us-0.15"  # ~40MB
     # Alternative: "whisper" (heavier but more accurate)
     
-    # TTS (Text-to-Speech) Settings
-    TTS_ENGINE: str = os.getenv("JARVIS_TTS_ENGINE", "pyttsx3")
-    # Alternatives: "piper", "espeak" (built-in on Pi)
+    # TTS — movie-like British neural voice (edge-tts). Needs internet for speech only.
+    TTS_ENGINE: str = os.getenv("JARVIS_TTS_ENGINE", "edge")
+    TTS_VOICE: str = os.getenv("JARVIS_TTS_VOICE", "en-GB-RyanNeural")
+    TTS_EDGE_RATE: str = os.getenv("JARVIS_TTS_EDGE_RATE", "-12%")
+    TTS_EDGE_PITCH: str = os.getenv("JARVIS_TTS_EDGE_PITCH", "-6Hz")
     PIPER_MODEL_PATH: str = "./models/piper"
-    TTS_RATE: int = 150
+    TTS_RATE: int = int(os.getenv("JARVIS_TTS_RATE", "145"))
+    SPEAK_REPLIES: bool = _env_bool("JARVIS_SPEAK", True)
     
     # LLM Settings
     DEFAULT_MODEL: str = "local"  # Ollama first

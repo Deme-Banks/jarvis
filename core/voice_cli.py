@@ -10,7 +10,7 @@ from core.boot import boot_orchestrator
 from core.session import JarvisSession
 from voice.audio_pi import PiAudioCapture, PiAudioOutput
 from voice.stt_pi import PiSTT
-from voice.tts_pi import PiTTS
+from voice.tts_pi import PiTTS, spoken_form
 
 WAKE = config.PiConfig.WAKE_WORD.lower()
 MIN_UTTERANCE_BYTES = int(config.PiConfig.SAMPLE_RATE * 2 * 0.4)
@@ -115,7 +115,7 @@ class VoiceJarvis:
     def _speak(self, text: str) -> None:
         self.is_speaking = True
         try:
-            self.tts.speak_aloud(text)
+            self.tts.speak_aloud(spoken_form(text))
         except Exception as exc:
             print(f"TTS failed: {exc}")
         finally:

@@ -23,21 +23,31 @@ class JarvisUI:
         self.session = JarvisSession(boot_orchestrator(announce=False))
         self.tts = PiTTS()
         self.busy = False
+        self.muted = False
         self.root = tk.Tk()
         self.root.title("JARVIS")
         self.root.configure(bg="#0b0b0d")
         self.root.geometry("720x540")
 
-        model = self.session.current_model()
         self.status = tk.Label(
             self.root,
-            text=f"Model: {model}   |   local, personal",
+            text=self.session.status_line(),
             fg="#d4af37",
             bg="#0b0b0d",
             font=("Segoe UI", 10),
             anchor="w",
         )
         self.status.pack(fill="x", padx=12, pady=(10, 4))
+
+        picker_row = tk.Frame(self.root, bg="#0b0b0d")
+        picker_row.pack(fill="x", padx=12)
+        tk.Label(picker_row, text="Brain", fg="#888", bg="#0b0b0d").pack(side="left")
+        model = self.session.current_model()
+        names = self.session.installed_models() or [model]
+        self.model_var = tk.StringVar(value=model if model in names else names[0])
+        self.picker = tk.OptionMenu(picker_row, self.model_var, *names, command=self._pick_model)
+        self.picker.configure(bg="#1c1c22", fg="#d4af37", highlightthickness=0)
+        self.picker.pack(side="left", padx=8)
 
         self.log = scrolledtext.ScrolledText(
             self.root,
@@ -74,9 +84,19 @@ class JarvisUI:
             row, text="Apply edit", command=self._apply, bg="#2a2a33", fg="#9fef9f"
         )
         self.apply_btn.pack(side="left", padx=(8, 0))
+        self.muted = False
+        self.mute_btn = tk.Button(
+            row, text="Mute", command=self._toggle_mute, bg="#2a2a33", fg="#d4af37"
+        )
+        self.mute_btn.pack(side="left", padx=(8, 0))
 
-        self._append("JARVIS", "Online. Type a command, or Mic to speak. Edits wait for Apply.")
+        self._append(
+            "JARVIS",
+            "Online. I am JARVIS — the other local models work with me, not instead of me. "
+            "Type a command, or Mic to speak. Edits wait for Apply. Say list crew to see who is on duty.",
+        )
         self.entry.focus_set()
+        self._speak("At your service, sir.")
 
     def _append(self, who: str, text: str) -> None:
         self.log.configure(state="normal")
@@ -108,19 +128,43 @@ class JarvisUI:
 
     def _on_reply(self, reply: str) -> None:
         self._append("JARVIS", reply)
-        model = self.session.current_model()
         pending = "   |   edit waiting" if self.session.pending_edit else ""
-        self._set_busy(False, f"Model: {model}   |   local, personal{pending}")
-        try:
-            self.tts.speak_aloud(reply[:400])
-        except Exception:
-            pass
+        self._set_busy(False, self.session.status_line() + pending)
+        self._speak(reply)
+
+    def _toggle_mute(self) -> None:
+        self.muted = not self.muted
+        self.mute_btn.configure(text="Unmute" if self.muted else "Mute")
+        if self.muted:
+            try:
+                self.tts.stop()
+            except Exception:
+                pass
+
+    def _speak(self, text: str) -> None:
+        if self.muted:
+            return
+
+        def work() -> None:
+            try:
+                self.tts.speak_aloud(text)
+            except Exception:
+                pass
+
+        threading.Thread(target=work, daemon=True).start()
 
     def _apply(self) -> None:
         if not self.session.pending_edit:
             self._append("JARVIS", "No pending edit.")
             return
         self._send("apply")
+
+    def _pick_model(self, choice: str) -> None:
+        if self.busy:
+            return
+        msg = self.session.switch_to(choice)
+        self._append("JARVIS", msg)
+        self.status.configure(text=self.session.status_line())
 
     def _mic(self) -> None:
         if self.busy:
@@ -139,7 +183,7 @@ class JarvisUI:
         threading.Thread(target=work, daemon=True).start()
 
     def _after_mic(self, heard: str) -> None:
-        self._set_busy(False, f"Model: {self.session.current_model()}   |   local, personal")
+        self._set_busy(False, self.session.status_line())
         if heard:
             self._send(heard)
         else:

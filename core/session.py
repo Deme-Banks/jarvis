@@ -50,16 +50,75 @@ class JarvisSession:
                 return "Cancelled. No files changed."
 
         if is_edit_request(text):
-            editor = SelfCodeEditor(self.orchestrator.llm)
+            editor = SelfCodeEditor(self.orchestrator.crew.coder_view())
             message, pending = editor.propose(text)
             self.pending_edit = pending
             return message
+
+        model_reply = self._maybe_switch_model(text)
+        if model_reply:
+            return model_reply
 
         skill = try_skill(text)
         if skill:
             return skill
         return self.orchestrator.process(text)
 
+    def _maybe_switch_model(self, text: str) -> str | None:
+        from core.models import catalog_text, resolve_alias, switch_runtime
+
+        lowered = text.lower().strip()
+        llm = getattr(self.orchestrator, "llm", None)
+        installed = llm.list_models() if llm and hasattr(llm, "list_models") else []
+        crew = getattr(self.orchestrator, "crew", None)
+        if (
+            "list models" in lowered
+            or "what models" in lowered
+            or "which model" in lowered
+            or "list crew" in lowered
+            or "who is working" in lowered
+            or lowered in {"models", "crew"}
+        ):
+            if crew is not None:
+                return crew.roster_text() + "\n\n" + catalog_text(installed=installed)
+            return catalog_text(installed=installed)
+        if lowered.startswith("use ") or lowered.startswith("switch to ") or "switch model" in lowered:
+            tag = resolve_alias(text)
+            if not tag:
+                return catalog_text(installed=installed)
+            if crew is not None:
+                return crew.prefer(tag)
+            if not llm:
+                return "No local model runtime."
+            return switch_runtime(llm, tag)
+        return None
+
+    def installed_models(self) -> list[str]:
+        llm = getattr(self.orchestrator, "llm", None)
+        if llm is None or not hasattr(llm, "list_models"):
+            return []
+        return llm.list_models()
+
+    def switch_to(self, tag: str) -> str:
+        crew = getattr(self.orchestrator, "crew", None)
+        if crew is not None:
+            return crew.prefer(tag)
+        from core.models import switch_runtime
+
+        llm = getattr(self.orchestrator, "llm", None)
+        if llm is None:
+            return "No local model runtime."
+        return switch_runtime(llm, tag)
+
     def current_model(self) -> str:
+        crew = getattr(self.orchestrator, "crew", None)
+        if crew is not None:
+            return crew.conductor_tag()
         llm = getattr(self.orchestrator, "llm", None)
         return str(getattr(llm, "model_name", "") or "local")
+
+    def status_line(self) -> str:
+        crew = getattr(self.orchestrator, "crew", None)
+        if crew is not None:
+            return crew.status_line()
+        return f"JARVIS  ·  {self.current_model()}  |  local, personal"

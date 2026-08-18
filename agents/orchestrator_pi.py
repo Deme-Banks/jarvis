@@ -30,6 +30,7 @@ class PiOrchestrator:
         self._vision_analyzer = None
         self._document_analyzer = None
         self._web_search = None
+        self._crew = None
         
         # Use optimized SmartCache instead of ResponseCache
         self.cache = SmartCache() if config.PiConfig.ENABLE_RESPONSE_CACHE else None
@@ -136,6 +137,15 @@ class PiOrchestrator:
         return self._web_search
     
     @property
+    def crew(self):
+        """Jarvis plus specialist local models."""
+        if self._crew is None:
+            from core.crew import JarvisCrew
+
+            self._crew = JarvisCrew(self.llm)
+        return self._crew
+
+    @property
     def agents(self):
         """Lazy load agent prompts"""
         if not self._prompts_loaded:
@@ -209,91 +219,20 @@ class PiOrchestrator:
     def _process_inner(self, user_request: str, context: Optional[Dict[str, Any]] = None) -> str:
         if context is not None and not isinstance(context, list):
             context = None
-        coding_response = self._handle_coding_request(user_request)
-        if coding_response:
-            return coding_response
-        
+
         if config.PiConfig.USE_PRECOMPUTED:
             precomputed = get_precomputed(user_request)
             if precomputed:
                 return precomputed
-        
+
         if self.cache:
             cached = self.cache.get(user_request)
             if cached:
                 return cached
-        
-        # For Pi, use direct orchestrator response (faster)
-        # Only use agents if explicitly enabled and needed
-        
-        agent_names = self._determine_agents(user_request)
-        
-        if not agent_names:
-            # Use Smart AI Selector to get the best response
-            result = self.ai_selector.get_best_response(
-                user_request,
-                system_prompt=VOICE_JARVIS_PROMPT,
-                context=context
-            )
-            
-            if result.get("success"):
-                response = result["response"]
-                provider_used = result.get("provider", "unknown")
-                
-                # Cache response with optimized cache
-                if self.cache:
-                    self.cache.set(user_request, response)
-                    # Also cache semantically
-                    self.cache.set_semantic(user_request, response)
-                
-                # Optionally include provider info in response (for transparency)
-                # For voice responses, we'll just return the response
-                return response
-            else:
-                # Fallback to direct LLM call if selector fails
-                response = self.llm.chat(
-                    user_request,
-                    system_prompt=VOICE_JARVIS_PROMPT
-                )
-                
-                if self.cache:
-                    self.cache.set(user_request, response)
-                    self.cache.set_semantic(user_request, response)
-                
-                return response
-        
-        # Collect agent responses (sequential for Pi)
-        agent_responses = {}
-        for agent_name in agent_names:
-            agent_responses[agent_name] = self._call_agent(agent_name, user_request)
-        
-        # Synthesize
-        synthesis = f"""User: {user_request}
 
-Agent insights:
-{chr(10).join(f"{name}: {resp}" for name, resp in agent_responses.items() if resp)}
+        response = self.crew.reply(user_request, context=context)
 
-Provide a concise voice-optimized response."""
-        
-        # Use Smart AI Selector for synthesis too
-        result = self.ai_selector.get_best_response(
-            synthesis,
-            system_prompt=VOICE_JARVIS_PROMPT,
-            context=context
-        )
-        
-        if result.get("success"):
-            response = result["response"]
-        else:
-            # Fallback
-            response = self.llm.chat(
-                synthesis,
-                system_prompt=VOICE_JARVIS_PROMPT
-            )
-        
-        # Cache response with optimized cache
         if self.cache:
             self.cache.set(user_request, response)
             self.cache.set_semantic(user_request, response)
-        
         return response

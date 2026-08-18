@@ -70,6 +70,56 @@ class LocalLLM:
             return assistant_message
         except requests.exceptions.RequestException as e:
             raise Exception(f"Local LLM error: {e}")
+
+    def complete(
+        self,
+        message: str,
+        *,
+        model: Optional[str] = None,
+        system_prompt: Optional[str] = None,
+        temperature: Optional[float] = None,
+        context: Optional[List[Dict[str, str]]] = None,
+    ) -> str:
+        """One-shot call to a specific model. Does not change Jarvis conversation memory."""
+        names = self.list_models()
+        wanted = (model or self.model_name or "").strip()
+        chosen = None
+        for name in names:
+            if name == wanted or (wanted and name.startswith(wanted)):
+                chosen = name
+                break
+        if not chosen:
+            chosen = self.pick_installed_model()
+        if not chosen:
+            raise Exception("Ollama has no models. Run: ollama pull qwen2.5-coder:7b")
+
+        messages: List[Dict[str, str]] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        if context:
+            messages.extend(context[-config.PiConfig.CONTEXT_MEMORY_SIZE:])
+        messages.append({"role": "user", "content": message})
+
+        payload = {
+            "model": chosen,
+            "messages": messages,
+            "stream": False,
+            "options": {
+                "temperature": temperature if temperature is not None else config.PiConfig.TEMPERATURE,
+                "num_predict": config.PiConfig.MAX_TOKENS,
+            },
+        }
+        timeout = getattr(config.PiConfig, "LOCAL_LLM_TIMEOUT", 120)
+        try:
+            response = requests.post(
+                f"{self.base_url}/api/chat",
+                json=payload,
+                timeout=timeout,
+            )
+            response.raise_for_status()
+            return response.json().get("message", {}).get("content", "")
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Local LLM error: {e}")
     
     def stream_chat(self, message: str, system_prompt: Optional[str] = None):
         """Stream chat response"""

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from core.boot import boot_orchestrator
 from core.session import JarvisSession
+from voice.tts_pi import PiTTS
 
 
 def run_text() -> None:
@@ -10,6 +11,7 @@ def run_text() -> None:
     print("Ask it to write code, explain a file, or edit its own source.")
     print()
     session = JarvisSession(boot_orchestrator())
+    tts = PiTTS()
     print()
     while True:
         try:
@@ -26,3 +28,7 @@ def run_text() -> None:
         print()
         print(f"Jarvis> {reply}")
         print()
+        try:
+            tts.speak_aloud(reply)
+        except Exception as exc:
+            print(f"Voice failed: {exc}")
