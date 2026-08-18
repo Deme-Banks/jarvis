@@ -1,85 +1,67 @@
 """
-Pre-computed Responses for Common Queries
+Pre-computed replies for short, exact-ish greetings only.
+
+Substring matching is avoided so "hi" does not fire inside "this".
 """
+from __future__ import annotations
+
+from datetime import datetime
 from typing import Dict, Optional
 
 
 class PrecomputedResponses:
-    """Pre-computed responses for instant answers"""
-    
     def __init__(self):
         self.responses = self._load_responses()
-    
+
     def _load_responses(self) -> Dict[str, str]:
-        """Load pre-computed responses"""
         return {
             "greeting": "Hello. I'm JARVIS. I can talk, write code, and edit files in this project when you ask.",
             "goodbye": "Goodbye. Call if you need me.",
             "thanks": "You're welcome.",
             "what can you do": "I run locally on Ollama. I can answer questions, explain and write code, and update files in this repo when you tell me to.",
-            "help": "Ask a question, say write a Python function, or tell me to edit a file in this project. Voice needs a mic; text mode does not.",
+            "help": "Ask a question, say write a Python function, or tell me to edit a file in this project.",
             "status": "All systems operational. Ready for commands.",
             "time": self._get_time_response(),
             "who are you": "I'm JARVIS, your personal local assistant. I use Ollama on this machine and I can help with code.",
-            "capabilities": "Chat, coding help, scoped edits to this repo, and optional voice if PyAudio is installed.",
+            "capabilities": "Chat, coding help, scoped edits to this repo, and optional voice via the microphone.",
             "learning": "I keep recent conversation context in this session. For code, name the file you want explained.",
-            "error": "I encountered an error. Let me try a different approach.",
-            "unknown": "I'm not sure how to help with that. Could you rephrase or ask for help?",
         }
-    
+
     def _get_time_response(self) -> str:
-        """Get current time response"""
-        from datetime import datetime
         now = datetime.now()
         return f"The current time is {now.strftime('%I:%M %p')} on {now.strftime('%B %d, %Y')}."
-    
+
     def get(self, query: str) -> Optional[str]:
-        """Get pre-computed response"""
-        query_lower = query.lower().strip()
-        
-        # Direct matches
+        query_lower = query.lower().strip().rstrip("!?.,")
         if query_lower in self.responses:
             return self.responses[query_lower]
-        
-        # Pattern matches
-        patterns = {
+
+        exact = {
             "hello": "greeting",
             "hi": "greeting",
             "hey": "greeting",
+            "hi jarvis": "greeting",
+            "hello jarvis": "greeting",
             "bye": "goodbye",
-            "exit": "goodbye",
-            "quit": "goodbye",
-            "thank": "thanks",
-            "what can": "what can you do",
-            "help me": "help",
-            "how can": "help",
+            "goodbye": "goodbye",
+            "thanks": "thanks",
+            "thank you": "thanks",
+            "help": "help",
+            "what time is it": "time",
             "what time": "time",
-            "current time": "time",
-            "who are": "who are you",
-            "what are": "capabilities",
-            "what do": "capabilities",
-            "learn": "learning",
+            "who are you": "who are you",
+            "what can you do": "what can you do",
         }
-        
-        for pattern, response_key in patterns.items():
-            if pattern in query_lower:
-                return self.responses.get(response_key)
-        
+        if query_lower in exact:
+            key = exact[query_lower]
+            if key == "time":
+                return self._get_time_response()
+            return self.responses.get(key)
         return None
-    
-    def add(self, key: str, response: str):
-        """Add custom pre-computed response"""
-        self.responses[key] = response
-    
-    def update_time(self):
-        """Update time response"""
-        self.responses["time"] = self._get_time_response()
 
 
-# Global instance
 _precomputed = PrecomputedResponses()
 
 
 def get_precomputed(query: str) -> Optional[str]:
-    """Get pre-computed response"""
     return _precomputed.get(query)

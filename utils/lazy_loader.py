@@ -42,8 +42,5 @@ class LazyLoader:
 
 # Register commonly used modules for lazy loading
 LazyLoader.register("orchestrator", "agents.orchestrator_pi")
-LazyLoader.register("cybersecurity", "cybersecurity.enhanced_integration")
-LazyLoader.register("ai_coding", "ai_coding.ai_code_generator")
-LazyLoader.register("voice", "voice.voice_interface_pi")
 LazyLoader.register("stt", "voice.stt_pi")
 LazyLoader.register("tts", "voice.tts_pi")

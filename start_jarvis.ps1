@@ -576,11 +576,11 @@ if ($wantVoice -and (Test-Path $venvPython)) {
 # ============================================================================
 # Step 7: Determine JARVIS Entry Point
 # ============================================================================
-$jarvisScript = switch ($Mode.ToLower()) {
-    "text" { "run_jarvis.py" }
-    "learning" { "jarvis_learning.py" }
-    "cybersec" { "jarvis_cybersec.py" }
-    default { "jarvis_pi.py" }
+$jarvisScript = "run.py"
+$jarvisArgs = switch ($Mode.ToLower()) {
+    "voice" { "voice" }
+    "pi" { "voice" }
+    default { "text" }
 }
 
 if (-not (Test-Path $jarvisScript)) {
@@ -602,7 +602,7 @@ Write-Host ""
 
 Write-Host "JARVIS Script:" -ForegroundColor $InfoColor
 Write-Host "  Mode: $Mode" -ForegroundColor White
-Write-Host "  Script: $jarvisScript" -ForegroundColor White
+    Write-Host "  Script: $jarvisScript $jarvisArgs" -ForegroundColor White
 Write-Host ""
 
 if ($AutoStart) {
@@ -619,7 +619,7 @@ if ($AutoStart) {
     
     # Run JARVIS and capture output/errors
     try {
-        & $venvPython $jarvisScript 2>&1
+        & $venvPython $jarvisScript $jarvisArgs 2>&1
         $exitCode = $LASTEXITCODE
         
         if ($exitCode -ne 0) {
@@ -644,16 +644,11 @@ if ($AutoStart) {
     }
 } else {
     Write-Host "To start JARVIS in text mode (Ollama, no microphone):" -ForegroundColor $InfoColor
-    Write-Host "  venv\Scripts\python.exe run_jarvis.py" -ForegroundColor White
-    Write-Host "  or: .\start_jarvis.ps1 -AutoStart -Mode text" -ForegroundColor White
+    Write-Host "  venv\Scripts\python.exe run.py text" -ForegroundColor White
     Write-Host ""
-    Write-Host "Voice mode (needs PyAudio):" -ForegroundColor $InfoColor
-    Write-Host "  venv\Scripts\python.exe $jarvisScript" -ForegroundColor White
+    Write-Host "Voice mode:" -ForegroundColor $InfoColor
+    Write-Host "  venv\Scripts\python.exe run.py voice" -ForegroundColor White
     Write-Host ""
-    Write-Host "Or activate the environment first:" -ForegroundColor $InfoColor
-    Write-Host "  venv\Scripts\activate" -ForegroundColor White
-    Write-Host "  python run_jarvis.py" -ForegroundColor White
-    Write-Host ""
-    Write-Host "Offline LLM setup: see OLLAMA.md" -ForegroundColor $InfoColor
-    Write-Host "To auto-start next time, use: .\start_jarvis.ps1 -AutoStart -Mode text" -ForegroundColor $InfoColor
+    Write-Host "Or: .\start_jarvis.ps1 -AutoStart -Mode text" -ForegroundColor $InfoColor
+    Write-Host "Offline LLM setup: see docs\OLLAMA.md" -ForegroundColor $InfoColor
 }

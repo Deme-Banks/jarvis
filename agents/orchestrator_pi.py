@@ -74,14 +74,14 @@ class PiOrchestrator:
             if self.prefer_cloud and self.cloud_manager.list_providers():
                 try:
                     self._llm = self.cloud_manager.get_provider()
-                except:
+                except Exception:
                     self._llm = self.local_llm
             elif self.local_llm.check_available():
                 self._llm = self.local_llm
             elif self.cloud_manager.list_providers():
                 try:
                     self._llm = self.cloud_manager.get_provider()
-                except:
+                except Exception:
                     self._llm = self.local_llm
             else:
                 self._llm = self.local_llm
@@ -201,18 +201,23 @@ class PiOrchestrator:
     
     def process(self, user_request: str, context: Optional[Dict[str, Any]] = None) -> str:
         """Process user request (optimized for Pi)"""
-        # Check for coding requests first
+        try:
+            return self._process_inner(user_request, context)
+        except Exception as exc:
+            return f"Something went wrong: {exc}"
+
+    def _process_inner(self, user_request: str, context: Optional[Dict[str, Any]] = None) -> str:
+        if context is not None and not isinstance(context, list):
+            context = None
         coding_response = self._handle_coding_request(user_request)
         if coding_response:
             return coding_response
         
-        # Check pre-computed responses first (fastest)
         if config.PiConfig.USE_PRECOMPUTED:
             precomputed = get_precomputed(user_request)
             if precomputed:
                 return precomputed
         
-        # Check cache
         if self.cache:
             cached = self.cache.get(user_request)
             if cached:

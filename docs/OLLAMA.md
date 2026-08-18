@@ -29,7 +29,8 @@ $env:OLLAMA_MODEL = "qwen2.5-coder:7b"
 ## Run Jarvis (text, no microphone)
 
 ```powershell
-.\venv\Scripts\python.exe run_jarvis.py
+.\venv\Scripts\python.exe run.py text
+.\venv\Scripts\python.exe run.py voice
 ```
 
 Or:

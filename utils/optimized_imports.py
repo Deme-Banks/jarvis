@@ -17,15 +17,10 @@ LazyLoader.register("vision_analysis", "ai_coding.vision_analysis")
 LazyLoader.register("document_analyzer", "ai_coding.document_analyzer")
 LazyLoader.register("web_search", "ai_coding.web_search")
 
-# Cybersecurity Modules
-LazyLoader.register("enhanced_security", "cybersecurity.enhanced_integration")
-LazyLoader.register("malware_lab", "cybersecurity.malware_lab")
-LazyLoader.register("ddos_tester", "cybersecurity.ddos_tester")
-
-# Voice Modules
-LazyLoader.register("voice_interface", "voice.voice_interface_pi")
+# Voice
 LazyLoader.register("stt", "voice.stt_pi")
 LazyLoader.register("tts", "voice.tts_pi")
+LazyLoader.register("audio", "voice.audio_pi")
 
 # Prompt Modules
 LazyLoader.register("orchestrator_prompt", "prompts.orchestrator")
