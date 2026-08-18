@@ -27,8 +27,22 @@ class PiTTS:
         elif self.engine == "espeak":
             return self._espeak_tts(text)
         else:
-            # Default to espeak (usually available on Pi)
             return self._espeak_tts(text)
+
+    def speak_aloud(self, text: str) -> None:
+        """Speak on the default output device (Windows-friendly)."""
+        if not (text or "").strip():
+            return
+        try:
+            import pyttsx3
+
+            engine = pyttsx3.init()
+            engine.setProperty("rate", self.rate)
+            engine.say(text)
+            engine.runAndWait()
+        except Exception as e:
+            print(f"pyttsx3 speak error: {e}")
+
     
     def _piper_tts(self, text: str) -> bytes:
         """Use Piper TTS (fast, local)"""

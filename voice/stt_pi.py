@@ -39,18 +39,14 @@ class PiSTT:
             raise
     
     def transcribe(self, audio_data: bytes) -> Optional[str]:
-        """Transcribe audio to text"""
+        """Transcribe a complete utterance to text."""
         if not self.recognizer:
             return None
-        
+
         try:
-            if self.recognizer.AcceptWaveform(audio_data):
-                result = json.loads(self.recognizer.Result())
-                return result.get("text", "").strip()
-            else:
-                # Partial result
-                partial = json.loads(self.recognizer.PartialResult())
-                return partial.get("partial", "").strip()
+            self.recognizer.AcceptWaveform(audio_data)
+            result = json.loads(self.recognizer.FinalResult())
+            return (result.get("text") or "").strip()
         except Exception as e:
             print(f"Transcription error: {e}")
             return None

@@ -34,7 +34,7 @@ class PiConfig:
     WAKE_WORD_SENSITIVITY: float = 0.5
     VAD_AGGRESSIVENESS: int = 2
     SAMPLE_RATE: int = 16000  # Lower for Pi
-    CHUNK_SIZE: int = 256  # Smaller chunks for faster processing
+    CHUNK_SIZE: int = 320  # 20 ms at 16 kHz — required by webrtcvad
     
     # Performance Settings
     ENABLE_RESPONSE_CACHE: bool = True

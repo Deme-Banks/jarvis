@@ -1,424 +1,163 @@
 """
-JARVIS Voice Assistant - Raspberry Pi Main Entry Point
+JARVIS voice entry — mic, Vosk STT, Ollama, pyttsx3 TTS.
+
+Optional Slack/plugins/analytics are not loaded here so Windows can actually start.
+Text chat is still: python run_jarvis.py
 """
-import time
-import threading
+from __future__ import annotations
+
 import os
-from typing import Optional
-from voice.audio_pi import PiAudioCapture, PiAudioOutput
-from voice.stt_pi import PiSTT, WakeWordDetector
-from voice.streaming_stt import StreamingSTT
-from voice.tts_pi import PiTTS
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+os.chdir(ROOT)
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+import numpy as np
+
+import utils.optimized_imports  # noqa: F401
+import config_pi as config
 from agents.orchestrator_pi import PiOrchestrator
 from llm.local_llm import LocalLLM
-from llm.cloud_llm import CloudLLMManager, OpenAILLM, GeminiLLM
-from llm.streaming_llm import StreamingLLM
-from optimization.lazy_loader import get_lazy
-from utils.error_handler import get_error_handler
-from intelligence.proactive_suggestions import ProactiveSuggestions
-from learning.memory import MemorySystem
-from features.command_history import CommandHistory
-from features.auto_complete import AutoComplete
-from features.voice_shortcuts import VoiceShortcuts
-from features.voice_enhancements import VoiceEnhancements
-from analytics.performance_monitor import PerformanceMonitor
-from analytics.usage_analytics import UsageAnalytics
-from plugins.plugin_system import PluginManager
-from optimization.gpu_acceleration import GPUAccelerator
-from optimization.semantic_cache import SemanticCache
-from optimization.model_quantization import ModelQuantizer
-from automation.workflow_engine import WorkflowEngine
-from features.multi_language import MultiLanguageSupport
-from integration.slack_bot import SlackBot
-from integration.telegram_bot import TelegramBot
-from monitoring.alerting import AlertingSystem
-from automation.scheduled_tasks import ScheduledTasks
-from ai_coding.code_executor import CodeExecutor
-from ai_coding.web_search import WebSearch
-from analytics.advanced_analytics import AdvancedAnalytics
-from features.quick_actions import QuickActions
-from features.voice_commands_advanced import AdvancedVoiceCommands
-from utils.system_optimizer import SystemOptimizer
-from utils.backup_manager import BackupManager
-from features.real_time_collaboration import RealTimeCollaboration
-from features.command_aliases import CommandAliases
-from features.smart_notifications import SmartNotifications
-from reporting.advanced_reports import AdvancedReporter
-from intelligence.ai_suggestions import AISuggestions
-from integration.discord_bot import DiscordBot
-from integration.email_notifications import EmailNotifications
-from security.advanced_security import AdvancedSecurity
-from deployment.docker_setup import DockerSetup
-from features.voice_feedback import VoiceFeedback
-import config_pi as config
-from prompts.voice_jarvis import VOICE_JARVIS_PROMPT
+from voice.audio_pi import PiAudioCapture, PiAudioOutput
+from voice.stt_pi import PiSTT
+from voice.tts_pi import PiTTS
+
+WAKE = config.PiConfig.WAKE_WORD.lower()
+# webrtcvad needs 10/20/30 ms frames. 320 samples @ 16 kHz = 20 ms.
+MIN_UTTERANCE_BYTES = int(config.PiConfig.SAMPLE_RATE * 2 * 0.4)
+SILENCE_FRAMES_END = 25  # ~0.5 s at 20 ms/frame
+ENERGY_SPEECH = 400.0
+
+
+def _is_loud(chunk: bytes) -> bool:
+    if len(chunk) < 2:
+        return False
+    samples = np.frombuffer(chunk, dtype=np.int16).astype(np.float32)
+    rms = float(np.sqrt(np.mean(samples * samples)))
+    return rms >= ENERGY_SPEECH
 
 
 class JarvisPi:
-    """Main JARVIS system for Raspberry Pi"""
-    
     def __init__(self):
-        # Initialize components (lazy loading if enabled)
-        if config.PiConfig.LAZY_LOADING:
-            # Load only essential components immediately
-            self.audio_capture = PiAudioCapture()
-            self.audio_output = PiAudioOutput()
-            self.stt = PiSTT()
-            self.tts = PiTTS()
-            self.wake_detector = WakeWordDetector(config.PiConfig.WAKE_WORD)
-            
-            # LLM and orchestrator loaded on first use
-            self._llm = None
-            self._orchestrator = None
-        else:
-            # Standard initialization
-            self.audio_capture = PiAudioCapture()
-            self.audio_output = PiAudioOutput()
-            self.stt = PiSTT()
-            self.tts = PiTTS()
-            self.wake_detector = WakeWordDetector(config.PiConfig.WAKE_WORD)
-            
-            # Initialize LLM
-            self._llm = LocalLLM()
-            if not self._llm.check_available():
-                print("Warning: Local LLM not available")
-                if config.PiConfig.FALLBACK_TO_CLOUD:
-                    print("Falling back to cloud...")
-                else:
-                    raise RuntimeError("No LLM available")
-            
-            # Setup cloud LLM manager
-            cloud_manager = CloudLLMManager()
-            
-            # Add OpenAI if API key is set
-            openai_key = os.getenv('OPENAI_API_KEY')
-            if openai_key:
-                openai_llm = OpenAILLM(
-                    api_key=openai_key,
-                    model=getattr(config.PiConfig, 'OPENAI_MODEL', 'gpt-4')
-                )
-                prefer_cloud = getattr(config.PiConfig, 'PREFER_CLOUD_LLM', False)
-                cloud_manager.add_provider('openai', openai_llm, set_default=prefer_cloud)
-            
-            # Add Gemini if API key is set
-            gemini_key = os.getenv('GEMINI_API_KEY')
-            if gemini_key:
-                gemini_llm = GeminiLLM(
-                    api_key=gemini_key,
-                    model=getattr(config.PiConfig, 'GEMINI_MODEL', 'gemini-pro')
-                )
-                prefer_cloud = getattr(config.PiConfig, 'PREFER_CLOUD_LLM', False)
-                if not openai_key:  # Only set as default if OpenAI not available
-                    cloud_manager.add_provider('gemini', gemini_llm, set_default=prefer_cloud)
-                else:
-                    cloud_manager.add_provider('gemini', gemini_llm)
-            
-            prefer_cloud = getattr(config.PiConfig, 'PREFER_CLOUD_LLM', False)
-            self._orchestrator = PiOrchestrator(
-                self._llm, 
-                cloud_manager,
-                prefer_cloud=prefer_cloud
-            )
-
-        self._init_runtime_state()
-    
-    def _init_runtime_state(self):
-        """State used by the listen loop (was previously unreachable)."""
-        self.is_listening = False
+        self.audio_capture = PiAudioCapture()
+        self.audio_output = PiAudioOutput()
+        self.stt = PiSTT()
+        self.tts = PiTTS()
+        self._llm = LocalLLM()
+        self._orchestrator = None
+        self.context_memory = []
+        self.awake = False
         self.is_speaking = False
         self.interrupted = False
-        self.context_memory = []
-        self.streaming_stt = None
-        self.streaming_llm = None
-        self.error_handler = get_error_handler()
-        self.memory = MemorySystem()
-        self.proactive = ProactiveSuggestions(self.memory)
-        self.command_history = CommandHistory()
-        self.auto_complete = AutoComplete(self.command_history, self.memory)
-        self.shortcuts = VoiceShortcuts()
-        self.voice_enhancements = VoiceEnhancements()
-        self.performance_monitor = PerformanceMonitor()
-        self.usage_analytics = UsageAnalytics()
-        self.plugin_manager = PluginManager()
-        self.gpu_accelerator = GPUAccelerator()
-        self.semantic_cache = SemanticCache()
-        self.model_quantizer = ModelQuantizer()
-        self.workflow_engine = WorkflowEngine()
-        self.multi_language = MultiLanguageSupport()
-        self.slack_bot = SlackBot()
-        self.telegram_bot = TelegramBot()
-        self.alerting = AlertingSystem()
-        self.scheduled_tasks = ScheduledTasks()
-        self.code_executor = CodeExecutor()
-        self.web_search = WebSearch()
-        self.advanced_analytics = AdvancedAnalytics()
-        self.quick_actions = QuickActions()
-        self.advanced_voice = AdvancedVoiceCommands()
-        self.system_optimizer = SystemOptimizer()
-        self.backup_manager = BackupManager()
-        self.collaboration = RealTimeCollaboration()
-        self.command_aliases = CommandAliases()
-        self.notifications = SmartNotifications()
-        self.reporter = AdvancedReporter()
-        self.ai_suggestions = AISuggestions()
-        self.discord_bot = DiscordBot()
-        self.email_notifications = EmailNotifications()
-        self.advanced_security = AdvancedSecurity()
-        self.docker_setup = DockerSetup()
-        self.voice_feedback = VoiceFeedback()
-        if config.PiConfig.ENABLE_RESPONSE_CACHE:
-            self.streaming_stt = StreamingSTT(self.stt)
-            self.streaming_llm = StreamingLLM(self.llm)
-    
+
     @property
     def llm(self):
-        """Lazy load LLM"""
-        if self._llm is None:
-            self._llm = LocalLLM()
-            if not self._llm.check_available():
-                if config.PiConfig.FALLBACK_TO_CLOUD:
-                    print("Falling back to cloud...")
-                else:
-                    raise RuntimeError("No LLM available")
         return self._llm
-    
+
     @property
     def orchestrator(self):
-        """Lazy load orchestrator"""
         if self._orchestrator is None:
-            # Setup cloud LLM manager
-            cloud_manager = CloudLLMManager()
-            
-            # Add OpenAI if API key is set
-            openai_key = os.getenv('OPENAI_API_KEY')
-            if openai_key:
-                openai_llm = OpenAILLM(
-                    api_key=openai_key,
-                    model=getattr(config.PiConfig, 'OPENAI_MODEL', 'gpt-4')
-                )
-                prefer_cloud = getattr(config.PiConfig, 'PREFER_CLOUD_LLM', False)
-                cloud_manager.add_provider('openai', openai_llm, set_default=prefer_cloud)
-            
-            # Add Gemini if API key is set
-            gemini_key = os.getenv('GEMINI_API_KEY')
-            if gemini_key:
-                gemini_llm = GeminiLLM(
-                    api_key=gemini_key,
-                    model=getattr(config.PiConfig, 'GEMINI_MODEL', 'gemini-pro')
-                )
-                prefer_cloud = getattr(config.PiConfig, 'PREFER_CLOUD_LLM', False)
-                if not openai_key:
-                    cloud_manager.add_provider('gemini', gemini_llm, set_default=prefer_cloud)
-                else:
-                    cloud_manager.add_provider('gemini', gemini_llm)
-            
-            prefer_cloud = getattr(config.PiConfig, 'PREFER_CLOUD_LLM', False)
             self._orchestrator = PiOrchestrator(
-                self.llm, 
-                cloud_manager,
-                prefer_cloud=prefer_cloud
+                local_llm=self._llm,
+                prefer_cloud=config.PiConfig.PREFER_CLOUD_LLM,
             )
         return self._orchestrator
-    
+
     def start(self):
-        """Start JARVIS system"""
-        print("JARVIS starting...")
-        
-        # Validate config
-        if not config.PiConfig.validate():
-            print("Configuration validation failed")
+        print("JARVIS starting (voice, Ollama, no PyAudio required)...")
+        try:
+            print(self._llm.ensure_ready())
+        except RuntimeError as exc:
+            print(exc)
             return
-        
-        # Start audio
+        if not self.stt.recognizer:
+            print("Vosk did not load. Check models/vosk-model-small-en-us-0.15")
+            return
+
         self.audio_capture.start_stream()
-        self.audio_output.start_stream()
-        
-        print(f"JARVIS ready. Say '{config.PiConfig.WAKE_WORD}' to activate.")
+        print(f"Ready. Say '{config.PiConfig.WAKE_WORD}' then your command.")
         print("Press Ctrl+C to exit")
-        
-        # Main loop
         try:
             self._main_loop()
         except KeyboardInterrupt:
             print("\nShutting down...")
         finally:
             self.cleanup()
-    
+
     def _main_loop(self):
-        """Main listening loop"""
-        audio_buffer = b''
+        audio_buffer = b""
         silence_frames = 0
-        max_silence = 5  # Reduced for faster response
-        
         while True:
-            # Read audio chunk
             chunk = self.audio_capture.read_chunk()
-            
-            # Check for wake word (simplified - use proper wake word detection)
-            # In production, use dedicated wake word detection thread
-            
-            # Detect speech
-            if self.audio_capture.is_speech(chunk):
+            speech = self.audio_capture.is_speech(chunk) or _is_loud(chunk)
+            if speech:
                 audio_buffer += chunk
                 silence_frames = 0
-            else:
-                silence_frames += 1
-                
-                # If we have audio and silence detected, process
-                if audio_buffer and silence_frames >= max_silence:
+                continue
+            silence_frames += 1
+            if audio_buffer and silence_frames >= SILENCE_FRAMES_END:
+                if len(audio_buffer) >= MIN_UTTERANCE_BYTES:
                     self._process_audio(audio_buffer)
-                    audio_buffer = b''
-                    silence_frames = 0
-    
+                audio_buffer = b""
+                silence_frames = 0
+
     def _process_audio(self, audio_data: bytes):
-        """Process captured audio with enhanced features"""
-        try:
-            # Transcribe (use streaming if available)
-            if self.streaming_stt and self.streaming_stt.is_streaming:
-                text = self.streaming_stt.get_text(timeout=0.5)
-                if not text:
-                    text = self.stt.transcribe(audio_data)
-            else:
-                text = self.stt.transcribe(audio_data)
-            
-            if not text or len(text.strip()) < 2:
+        text = self.stt.transcribe(audio_data) or ""
+        text = text.strip()
+        if len(text) < 2:
+            return
+
+        lowered = text.lower()
+        print(f"You: {text}")
+
+        if not self.awake:
+            if WAKE not in lowered:
                 return
-            
-            # Expand shortcuts
-            text = self.shortcuts.expand(text)
-            
-            print(f"You: {text}")
-            
-            # Check for history/favorites commands
-            if text.lower().startswith("repeat"):
-                # Repeat last command
-                recent = self.command_history.get_recent(1)
-                if recent:
-                    text = recent[0]["command"]
-                    print(f"Repeating: {text}")
-            
-            elif text.lower().startswith("favorite"):
-                # Execute favorite
-                favorites = self.command_history.get_favorites()
-                if favorites:
-                    # Use most recent favorite
-                    text = favorites[-1]["command"]
-                    print(f"Using favorite: {text}")
-            
-            # Check plugins first
-            start_time = time.time()
-            plugin_response = self.plugin_manager.handle_command(
-                text,
-                context={"memory": self.context_memory[-5:]}
-            )
-            
-            if plugin_response:
-                response = plugin_response
-                success = True
-            else:
-                # Get response from orchestrator (with error handling)
-                try:
-                    response = self.orchestrator.process(
-                        text,
-                        context={"memory": self.context_memory[-5:]}
-                    )
-                    success = True
-                except Exception as e:
-                    response = self.error_handler.handle_error(
-                        e,
-                        context={"user_input": text},
-                        retry=True
-                    ) or "I encountered an error. Let me try again."
-                    success = False
-            
-            # Record metrics
-            response_time = time.time() - start_time
-            self.performance_monitor.record_response_time(response_time)
-            self.performance_monitor.record_command(text)
-            self.usage_analytics.record_command(text, success, response_time)
-            
-            # Save to history
-            self.command_history.add(text, response, success)
-            
-            # Add proactive suggestions if appropriate
-            suggestions = self.proactive.suggest_next_action(text)
-            if suggestions and len(response) < 100:
-                response += f" [Suggestions: {', '.join(suggestions[:2])}]"
-            
-            # Update memory
-            self.context_memory.append({"user": text, "assistant": response})
-            if len(self.context_memory) > config.PiConfig.CONTEXT_MEMORY_SIZE:
-                self.context_memory = self.context_memory[-config.PiConfig.CONTEXT_MEMORY_SIZE:]
-            
-            print(f"JARVIS: {response}")
-            
-            # Speak response (streaming if available)
-            if self.streaming_llm and len(response) > 50:
-                try:
-                    self._speak_streaming(response)
-                except:
-                    # Fallback to normal speech
-                    self._speak(response)
-            else:
-                self._speak(response)
-                
-        except Exception as e:
-            self.error_handler.handle_error(e, context={"audio_data_length": len(audio_data)})
-    
-    def _speak_streaming(self, text: str):
-        """Speak with streaming TTS"""
-        def on_chunk(chunk: str):
-            # Speak chunk immediately if not interrupted
-            if not self.interrupted:
-                try:
-                    audio = self.tts.speak(chunk)
-                    if not self.interrupted:
-                        self.audio_output.play_audio(audio)
-                except:
-                    pass
-        
-        # Stream response and speak chunks
+            self.awake = True
+            after = lowered.split(WAKE, 1)[-1].strip(" ,.-")
+            if len(after) < 2:
+                self._speak("Yes?")
+                return
+            text = after
+
         try:
-            full_response = self.streaming_llm.stream_with_callback(
+            reply = self.orchestrator.process(
                 text,
-                on_chunk
+                context={"memory": self.context_memory[-5:]},
             )
-        except:
-            # Fallback to normal speech
-            self._speak(text)
-    
+        except Exception as exc:
+            reply = f"Something went wrong: {exc}"
+
+        self.context_memory.append({"user": text, "assistant": reply})
+        if len(self.context_memory) > config.PiConfig.CONTEXT_MEMORY_SIZE:
+            self.context_memory = self.context_memory[-config.PiConfig.CONTEXT_MEMORY_SIZE :]
+
+        print(f"JARVIS: {reply}")
+        self._speak(reply)
+        self.awake = False
+
     def _speak(self, text: str):
-        """Speak text with interruption handling"""
         self.is_speaking = True
-        self.interrupted = False
-        
-        # Generate audio
-        audio_data = self.tts.speak(text)
-        
-        # Play audio (with interruption check)
-        if not self.interrupted:
-            self.audio_output.play_audio(audio_data)
-        
-        self.is_speaking = False
-    
+        try:
+            self.tts.speak_aloud(text)
+        finally:
+            self.is_speaking = False
+
     def interrupt(self):
-        """Interrupt current speech"""
-        if self.is_speaking:
-            self.interrupted = True
-            self.audio_output.stop()
-            self.tts.stop()
-            print("Interrupted")
-    
+        self.interrupted = True
+        self.audio_output.stop()
+        self.tts.stop()
+
     def cleanup(self):
-        """Cleanup resources"""
         self.audio_capture.cleanup()
         self.audio_output.cleanup()
 
 
 def main():
-    """Main entry point"""
-    jarvis = JarvisPi()
-    jarvis.start()
+    JarvisPi().start()
 
 
 if __name__ == "__main__":
