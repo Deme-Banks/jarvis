@@ -6,7 +6,7 @@ param(
     [switch]$SkipInstall,    # Skip package installation
     [switch]$SkipEnvCheck,   # Skip .env file check
     [switch]$AutoStart,      # Automatically start JARVIS after setup
-    [string]$Mode = "text",  # Mode: text (Ollama REPL), pi (voice), learning
+    [string]$Mode = "ui",    # Mode: ui (window), text, voice
     [switch]$Help            # Show help
 )
 
@@ -580,7 +580,8 @@ $jarvisScript = "run.py"
 $jarvisArgs = switch ($Mode.ToLower()) {
     "voice" { "voice" }
     "pi" { "voice" }
-    default { "text" }
+    "text" { "text" }
+    default { "ui" }
 }
 
 if (-not (Test-Path $jarvisScript)) {

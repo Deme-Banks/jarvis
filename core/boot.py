@@ -39,7 +39,7 @@ def boot_orchestrator(*, announce: bool = True) -> PiOrchestrator:
         if not (config.PiConfig.FALLBACK_TO_CLOUD and _has_cloud_keys()):
             if announce:
                 print("Install Ollama from https://ollama.com/download then run:")
-                print("  ollama pull qwen2.5-coder:3b")
+                print("  ollama pull qwen2.5-coder:7b")
             sys.exit(1)
         if announce:
             print("Ollama is down. Trying a cloud key if one is configured...")

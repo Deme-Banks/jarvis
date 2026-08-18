@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+from dataclasses import dataclass
 from typing import Any, Optional
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -67,6 +68,96 @@ def is_edit_request(text: str) -> bool:
     return any(hint in lowered for hint in EDIT_HINTS)
 
 
+def is_confirm(text: str) -> bool:
+    lowered = (text or "").strip().lower().rstrip(".!")
+    return lowered in {
+        "yes",
+        "y",
+        "yeah",
+        "yep",
+        "apply",
+        "apply it",
+        "do it",
+        "confirm",
+        "go ahead",
+        "make it so",
+        "proceed",
+        "do that",
+        "ok",
+        "okay",
+    }
+
+
+def is_cancel(text: str) -> bool:
+    lowered = (text or "").strip().lower().rstrip(".!")
+    return lowered in {
+        "no",
+        "n",
+        "cancel",
+        "don't",
+        "dont",
+        "abort",
+        "never mind",
+        "nevermind",
+        "stop",
+    }
+
+
+@dataclass
+class PendingEdit:
+    action: str
+    rel: str
+    target: Path
+    old: str
+    new: str
+    summary: str
+
+    def preview(self) -> str:
+        import difflib
+
+        if self.action == "write":
+            lines = self.new.splitlines()[:40]
+            body = "\n".join(lines)
+            extra = "\n..." if self.new.count("\n") > 40 else ""
+            return (
+                f"Proposed write to {self.rel} ({self.summary or 'new file'}).\n"
+                f"{body}{extra}\n\nSay apply to write it, or cancel."
+            )
+        diff = list(
+            difflib.unified_diff(
+                self.old.splitlines(),
+                self.new.splitlines(),
+                fromfile=self.rel,
+                tofile=self.rel,
+                lineterm="",
+                n=2,
+            )
+        )[:60]
+        shown = "\n".join(diff) if diff else "(no textual diff)"
+        return (
+            f"Proposed change to {self.rel}: {self.summary or ''}\n{shown}\n\n"
+            "Say apply to write it, or cancel."
+        )
+
+    def commit(self) -> str:
+        ok, reason = _is_allowed(self.target)
+        if not ok:
+            return reason
+        if self.action == "replace":
+            current = self.target.read_text(encoding="utf-8")
+            if current != self.old:
+                return f"File changed since the preview. {self.rel} was not written."
+            self.target.write_text(self.new, encoding="utf-8")
+            return f"Applied. Updated {self.rel}."
+        if self.action == "write":
+            if len(self.new.encode("utf-8")) > MAX_FILE_BYTES:
+                return "That file would be too large to write."
+            self.target.parent.mkdir(parents=True, exist_ok=True)
+            self.target.write_text(self.new, encoding="utf-8")
+            return f"Applied. Wrote {self.rel}."
+        return "Nothing to apply."
+
+
 def _is_allowed(path: Path) -> tuple[bool, str]:
     try:
         resolved = path.resolve()
@@ -106,12 +197,13 @@ class SelfCodeEditor:
     def __init__(self, llm: Any):
         self.llm = llm
 
-    def apply(self, instruction: str) -> str:
+    def propose(self, instruction: str) -> tuple[str, Optional[PendingEdit]]:
+        """Plan an edit. Does not write replace/write until PendingEdit.commit()."""
         lowered = (instruction or "").lower().replace("\\", "/")
         if "cybersecurity" in lowered or "mobile_security" in lowered:
-            return "That folder is blocked from self-edits."
+            return "That folder is blocked from self-edits.", None
         if ".env" in lowered.replace(" ", ""):
-            return "Secret files cannot be edited."
+            return "Secret files cannot be edited.", None
         snapshot = "\n".join(list_source_files())
         user = (
             f"Project root: {PROJECT_ROOT}\n"
@@ -124,49 +216,68 @@ class SelfCodeEditor:
             raw = self.llm.chat(user, system_prompt=SYSTEM_PROMPT)
         plan = _parse_plan(raw)
         if not plan:
-            return "I heard an edit request but could not parse a file plan. Try naming the file and the change."
+            return (
+                "I heard an edit request but could not parse a file plan. Try naming the file and the change.",
+                None,
+            )
         action = str(plan.get("action") or "").lower()
         if action == "list":
             files = list_source_files(40)
-            return (plan.get("summary") or "Project files") + ":\n" + "\n".join(files[:40])
+            return (plan.get("summary") or "Project files") + ":\n" + "\n".join(files[:40]), None
         rel = str(plan.get("path") or "").strip()
         if not rel:
-            return "Edit plan was missing a path."
+            return "Edit plan was missing a path.", None
         target = (PROJECT_ROOT / rel).resolve()
         ok, reason = _is_allowed(target)
         if not ok:
-            return reason
+            return reason, None
         if action == "read":
             if not target.exists():
-                return f"Not found: {rel}"
+                return f"Not found: {rel}", None
             text = target.read_text(encoding="utf-8", errors="replace")
             if len(text) > 8000:
                 text = text[:8000] + "\n...[truncated]..."
-            return f"{rel}:\n{text}"
+            return f"{rel}:\n{text}", None
         if action == "replace":
             if not target.exists():
-                return f"Not found: {rel}"
+                return f"Not found: {rel}", None
             original = target.read_text(encoding="utf-8")
             old = str(plan.get("old_string") or "")
             new = str(plan.get("new_string") or "")
             if not old:
-                return "Replace plan needed old_string."
+                return "Replace plan needed old_string.", None
             if old not in original:
-                return f"Could not find the exact text to replace in {rel}."
+                return f"Could not find the exact text to replace in {rel}.", None
             if original.count(old) > 1:
-                return f"That snippet appears more than once in {rel}. Be more specific."
-            target.write_text(original.replace(old, new, 1), encoding="utf-8")
-            return f"Updated {rel}. {plan.get('summary') or ''}".strip()
+                return f"That snippet appears more than once in {rel}. Be more specific.", None
+            pending = PendingEdit(
+                action="replace",
+                rel=rel,
+                target=target,
+                old=old,
+                new=original.replace(old, new, 1),
+                summary=str(plan.get("summary") or ""),
+            )
+            return pending.preview(), pending
         if action == "write":
             content = str(plan.get("content") or "")
             if not content.strip():
-                return "Write plan was empty."
-            if len(content.encode("utf-8")) > MAX_FILE_BYTES:
-                return "That file would be too large to write."
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(content, encoding="utf-8")
-            return f"Wrote {rel}. {plan.get('summary') or ''}".strip()
-        return f"Unknown edit action: {action}"
+                return "Write plan was empty.", None
+            pending = PendingEdit(
+                action="write",
+                rel=rel,
+                target=target,
+                old="",
+                new=content,
+                summary=str(plan.get("summary") or ""),
+            )
+            return pending.preview(), pending
+        return f"Unknown edit action: {action}", None
+
+    def apply(self, instruction: str) -> str:
+        """Preview only. Session commits after the user confirms."""
+        message, _pending = self.propose(instruction)
+        return message
 
 
 def _parse_plan(raw: str) -> Optional[dict]:

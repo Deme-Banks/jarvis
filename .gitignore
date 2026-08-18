@@ -79,6 +79,7 @@ logs/
 
 # Learning/Memory data
 memory/
+data/
 *.pkl
 
 # Temporary files

@@ -20,7 +20,7 @@ class PiConfig:
     # Local Model Settings (Ollama) — default offline brain
     USE_LOCAL_MODEL: bool = _env_bool("JARVIS_USE_OLLAMA", True)
     LOCAL_MODEL_URL: str = os.getenv("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
-    LOCAL_MODEL_NAME: str = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:3b")
+    LOCAL_MODEL_NAME: str = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
     # Windows/PC alternatives: llama3.2, llama3.1:8b, phi3, gemma2:2b
     
     # Fallback to cloud only if Ollama is down and keys exist

@@ -138,13 +138,16 @@ class LocalLLM:
             return []
 
     def pick_installed_model(self) -> Optional[str]:
-        """Use configured model if present, else the first pulled Ollama model."""
+        """Prefer the configured model, then any coder model, then the first pull."""
         names = self.list_models()
         if not names:
             return None
         wanted = (self.model_name or "").strip()
         for name in names:
-            if name == wanted or name.startswith(wanted + ":"):
+            if name == wanted or (wanted and name.startswith(wanted)):
+                return name
+        for name in names:
+            if "coder" in name:
                 return name
         return names[0]
 

@@ -23,9 +23,9 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "mode",
         nargs="?",
-        choices=("text", "voice"),
-        default="text",
-        help="text = keyboard (default). voice = microphone.",
+        choices=("text", "voice", "ui"),
+        default="ui",
+        help="ui = window (default). text = keyboard. voice = wake-word mic.",
     )
     args = parser.parse_args(argv)
     if args.mode == "voice":
@@ -33,9 +33,14 @@ def main(argv: list[str] | None = None) -> None:
 
         run_voice()
         return
-    from core.text_cli import run_text
+    if args.mode == "text":
+        from core.text_cli import run_text
 
-    run_text()
+        run_text()
+        return
+    from core.ui_app import run_ui
+
+    run_ui()
 
 
 if __name__ == "__main__":
