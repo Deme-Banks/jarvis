@@ -8,6 +8,7 @@ from utils.performance_profiler import PerformanceProfiler
 from prompts.orchestrator import ORCHESTRATOR_PROMPT
 from optimization.precomputed import get_precomputed
 import config_pi as config
+import utils.optimized_imports  # noqa: F401
 
 
 class PiOrchestrator:
@@ -185,6 +186,18 @@ class PiOrchestrator:
             selected_agents.append("productivity_chief")
         
         return selected_agents[:config.PiConfig.MAX_CONCURRENT_AGENTS]
+
+    def _handle_coding_request(self, user_request: str) -> str:
+        """Explain, write, debug, or (when asked) edit Jarvis source."""
+        from ai_coding.code_brain import CodeBrain, is_coding_request
+
+        if not is_coding_request(user_request):
+            return ""
+        brain = CodeBrain(self.llm)
+        try:
+            return brain.answer(user_request)
+        except Exception as exc:
+            return f"Coding helper failed: {exc}"
     
     def process(self, user_request: str, context: Optional[Dict[str, Any]] = None) -> str:
         """Process user request (optimized for Pi)"""
@@ -201,7 +214,7 @@ class PiOrchestrator:
         
         # Check cache
         if self.cache:
-            cached = self.cache.get(user_request, context)
+            cached = self.cache.get(user_request)
             if cached:
                 return cached
         

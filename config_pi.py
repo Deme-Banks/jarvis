@@ -3,19 +3,28 @@ Raspberry Pi Optimized Configuration
 """
 import os
 from typing import Optional
-from dotenv import load_dotenv
 
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None or raw.strip() == "":
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 class PiConfig:
-    # Local Model Settings (Ollama, local LLM)
-    USE_LOCAL_MODEL: bool = True
-    LOCAL_MODEL_URL: str = "http://localhost:11434"  # Ollama default
-    LOCAL_MODEL_NAME: str = "llama3.2:1b"  # Lightweight model for Pi
-    # Alternatives: "phi3:mini", "tinyllama", "gemma:2b"
+    # Local Model Settings (Ollama) — default offline brain
+    USE_LOCAL_MODEL: bool = _env_bool("JARVIS_USE_OLLAMA", True)
+    LOCAL_MODEL_URL: str = os.getenv("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
+    LOCAL_MODEL_NAME: str = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:3b")
+    # Windows/PC alternatives: llama3.2, llama3.1:8b, phi3, gemma2:2b
     
-    # Fallback to cloud if local unavailable
-    FALLBACK_TO_CLOUD: bool = True
+    # Fallback to cloud only if Ollama is down and keys exist
+    FALLBACK_TO_CLOUD: bool = _env_bool("JARVIS_FALLBACK_CLOUD", True)
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
     ANTHROPIC_API_KEY: Optional[str] = os.getenv("ANTHROPIC_API_KEY")
     
@@ -41,24 +50,24 @@ class PiConfig:
     
     # STT (Speech-to-Text) Settings
     STT_ENGINE: str = "vosk"  # Offline, lightweight
-    VOSK_MODEL_PATH: str = "./models/vosk-model-small-en-us-0.22"  # ~40MB
+    VOSK_MODEL_PATH: str = "./models/vosk-model-small-en-us-0.15"  # ~40MB
     # Alternative: "whisper" (heavier but more accurate)
     
     # TTS (Text-to-Speech) Settings
-    TTS_ENGINE: str = "piper"  # Fast, local TTS
-    # Alternatives: "pyttsx3", "espeak" (built-in on Pi)
+    TTS_ENGINE: str = os.getenv("JARVIS_TTS_ENGINE", "pyttsx3")
+    # Alternatives: "piper", "espeak" (built-in on Pi)
     PIPER_MODEL_PATH: str = "./models/piper"
     TTS_RATE: int = 150
     
     # LLM Settings
-    DEFAULT_MODEL: str = "local"  # Use local by default
+    DEFAULT_MODEL: str = "local"  # Ollama first
     
     # Cloud LLM Settings
-    PREFER_CLOUD_LLM: bool = True  # Use cloud LLM if available
+    PREFER_CLOUD_LLM: bool = _env_bool("JARVIS_PREFER_CLOUD", False)
     OPENAI_MODEL: str = "gpt-4"  # or "gpt-3.5-turbo" for faster/cheaper
     GEMINI_MODEL: str = "gemini-pro"
     TEMPERATURE: float = 0.7
-    MAX_TOKENS: int = 300  # Lower for Pi performance
+    MAX_TOKENS: int = int(os.getenv("JARVIS_MAX_TOKENS", "800"))
     
     # Interruption Settings
     INTERRUPTION_ENABLED: bool = True
@@ -69,7 +78,8 @@ class PiConfig:
     
     # Performance Settings
     ENABLE_ALL_AGENTS: bool = False  # Disable for performance
-    AGENT_TIMEOUT: float = 15.0  # Shorter timeout
+    AGENT_TIMEOUT: float = float(os.getenv("JARVIS_AGENT_TIMEOUT", "90"))
+    LOCAL_LLM_TIMEOUT: float = float(os.getenv("JARVIS_LLM_TIMEOUT", "120"))
     MAX_CONCURRENT_AGENTS: int = 1  # Sequential processing
     
     # Advanced Features
@@ -90,10 +100,9 @@ class PiConfig:
                 if response.status_code == 200:
                     return True
             except:
-                if cls.FALLBACK_TO_CLOUD:
-                    print("Local model unavailable, falling back to cloud")
-                    return bool(cls.OPENAI_API_KEY or cls.ANTHROPIC_API_KEY)
-                else:
-                    print("Warning: Local model not available and fallback disabled")
-                    return False
+                if cls.FALLBACK_TO_CLOUD and (cls.OPENAI_API_KEY or os.getenv("GEMINI_API_KEY")):
+                    print("Ollama unavailable — falling back to cloud API if configured")
+                    return True
+                print("Ollama is not running. Install from https://ollama.com then: ollama pull qwen2.5-coder:3b")
+                return False
         return True

@@ -13,19 +13,16 @@ class PrecomputedResponses:
     def _load_responses(self) -> Dict[str, str]:
         """Load pre-computed responses"""
         return {
-            "greeting": "Hello! I'm JARVIS, ready to assist.",
-            "goodbye": "Goodbye! Have a great day.",
-            "thanks": "You're welcome! Happy to help.",
-            "what can you do": "I can help with cybersecurity testing, malware analysis, DDoS testing, USB deployment, and much more. What would you like to do?",
-            "help": "I can help with: creating payloads, running security tests, deploying to USB, learning from interactions, and more. Just ask!",
+            "greeting": "Hello. I'm JARVIS. I can talk, write code, and edit files in this project when you ask.",
+            "goodbye": "Goodbye. Call if you need me.",
+            "thanks": "You're welcome.",
+            "what can you do": "I run locally on Ollama. I can answer questions, explain and write code, and update files in this repo when you tell me to.",
+            "help": "Ask a question, say write a Python function, or tell me to edit a file in this project. Voice needs a mic; text mode does not.",
             "status": "All systems operational. Ready for commands.",
             "time": self._get_time_response(),
-            "who are you": "I'm JARVIS, an AI assistant for cybersecurity testing and automation. I help with authorized security testing and learning.",
-            "capabilities": "I can create malware payloads, run DDoS tests, deploy to USB, learn from interactions, recognize emotions, and much more.",
-            "learning": "I learn from every interaction, remember your preferences, and improve over time. Ask 'what have you learned' to see my progress.",
-            "usb": "I can detect USB drives, deploy payloads, create packages, and clean USB drives. Say 'detect USB' to start.",
-            "malware": "I can create various payloads: keyloggers, reverse shells, RATs, credential harvesters, and more. What would you like to create?",
-            "security": "I provide cybersecurity testing tools for authorized use. All tools include safety warnings and are for educational purposes.",
+            "who are you": "I'm JARVIS, your personal local assistant. I use Ollama on this machine and I can help with code.",
+            "capabilities": "Chat, coding help, scoped edits to this repo, and optional voice if PyAudio is installed.",
+            "learning": "I keep recent conversation context in this session. For code, name the file you want explained.",
             "error": "I encountered an error. Let me try a different approach.",
             "unknown": "I'm not sure how to help with that. Could you rephrase or ask for help?",
         }
@@ -62,11 +59,6 @@ class PrecomputedResponses:
             "what are": "capabilities",
             "what do": "capabilities",
             "learn": "learning",
-            "usb": "usb",
-            "malware": "malware",
-            "payload": "malware",
-            "security": "security",
-            "cyber": "security",
         }
         
         for pattern, response_key in patterns.items():

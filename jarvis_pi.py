@@ -79,8 +79,8 @@ class JarvisPi:
             self.wake_detector = WakeWordDetector(config.PiConfig.WAKE_WORD)
             
             # Initialize LLM
-            self.llm = LocalLLM()
-            if not self.llm.check_available():
+            self._llm = LocalLLM()
+            if not self._llm.check_available():
                 print("Warning: Local LLM not available")
                 if config.PiConfig.FALLBACK_TO_CLOUD:
                     print("Falling back to cloud...")
@@ -97,7 +97,7 @@ class JarvisPi:
                     api_key=openai_key,
                     model=getattr(config.PiConfig, 'OPENAI_MODEL', 'gpt-4')
                 )
-                prefer_cloud = getattr(config.PiConfig, 'PREFER_CLOUD_LLM', True)
+                prefer_cloud = getattr(config.PiConfig, 'PREFER_CLOUD_LLM', False)
                 cloud_manager.add_provider('openai', openai_llm, set_default=prefer_cloud)
             
             # Add Gemini if API key is set
@@ -107,76 +107,27 @@ class JarvisPi:
                     api_key=gemini_key,
                     model=getattr(config.PiConfig, 'GEMINI_MODEL', 'gemini-pro')
                 )
-                prefer_cloud = getattr(config.PiConfig, 'PREFER_CLOUD_LLM', True)
+                prefer_cloud = getattr(config.PiConfig, 'PREFER_CLOUD_LLM', False)
                 if not openai_key:  # Only set as default if OpenAI not available
                     cloud_manager.add_provider('gemini', gemini_llm, set_default=prefer_cloud)
                 else:
                     cloud_manager.add_provider('gemini', gemini_llm)
             
-            prefer_cloud = getattr(config.PiConfig, 'PREFER_CLOUD_LLM', True)
-            self.orchestrator = PiOrchestrator(
-                self.llm, 
-                cloud_manager,
-                prefer_cloud=prefer_cloud
-            )
-    
-    @property
-    def llm(self):
-        """Lazy load LLM"""
-        if self._llm is None:
-            self._llm = LocalLLM()
-            if not self._llm.check_available():
-                if config.PiConfig.FALLBACK_TO_CLOUD:
-                    print("Falling back to cloud...")
-                else:
-                    raise RuntimeError("No LLM available")
-        return self._llm
-    
-    @property
-    def orchestrator(self):
-        """Lazy load orchestrator"""
-        if self._orchestrator is None:
-            # Setup cloud LLM manager
-            cloud_manager = CloudLLMManager()
-            
-            # Add OpenAI if API key is set
-            openai_key = os.getenv('OPENAI_API_KEY')
-            if openai_key:
-                openai_llm = OpenAILLM(
-                    api_key=openai_key,
-                    model=getattr(config.PiConfig, 'OPENAI_MODEL', 'gpt-4')
-                )
-                prefer_cloud = getattr(config.PiConfig, 'PREFER_CLOUD_LLM', True)
-                cloud_manager.add_provider('openai', openai_llm, set_default=prefer_cloud)
-            
-            # Add Gemini if API key is set
-            gemini_key = os.getenv('GEMINI_API_KEY')
-            if gemini_key:
-                gemini_llm = GeminiLLM(
-                    api_key=gemini_key,
-                    model=getattr(config.PiConfig, 'GEMINI_MODEL', 'gemini-pro')
-                )
-                prefer_cloud = getattr(config.PiConfig, 'PREFER_CLOUD_LLM', True)
-                if not openai_key:
-                    cloud_manager.add_provider('gemini', gemini_llm, set_default=prefer_cloud)
-                else:
-                    cloud_manager.add_provider('gemini', gemini_llm)
-            
-            prefer_cloud = getattr(config.PiConfig, 'PREFER_CLOUD_LLM', True)
+            prefer_cloud = getattr(config.PiConfig, 'PREFER_CLOUD_LLM', False)
             self._orchestrator = PiOrchestrator(
-                self.llm, 
+                self._llm, 
                 cloud_manager,
                 prefer_cloud=prefer_cloud
             )
-        return self._orchestrator
-        
-        # State
+
+        self._init_runtime_state()
+    
+    def _init_runtime_state(self):
+        """State used by the listen loop (was previously unreachable)."""
         self.is_listening = False
         self.is_speaking = False
         self.interrupted = False
         self.context_memory = []
-        
-        # Enhanced features
         self.streaming_stt = None
         self.streaming_llm = None
         self.error_handler = get_error_handler()
@@ -215,11 +166,59 @@ class JarvisPi:
         self.advanced_security = AdvancedSecurity()
         self.docker_setup = DockerSetup()
         self.voice_feedback = VoiceFeedback()
-        
-        # Initialize streaming if enabled
-        if config.PiConfig.ENABLE_RESPONSE_CACHE:  # Use as proxy for streaming
+        if config.PiConfig.ENABLE_RESPONSE_CACHE:
             self.streaming_stt = StreamingSTT(self.stt)
             self.streaming_llm = StreamingLLM(self.llm)
+    
+    @property
+    def llm(self):
+        """Lazy load LLM"""
+        if self._llm is None:
+            self._llm = LocalLLM()
+            if not self._llm.check_available():
+                if config.PiConfig.FALLBACK_TO_CLOUD:
+                    print("Falling back to cloud...")
+                else:
+                    raise RuntimeError("No LLM available")
+        return self._llm
+    
+    @property
+    def orchestrator(self):
+        """Lazy load orchestrator"""
+        if self._orchestrator is None:
+            # Setup cloud LLM manager
+            cloud_manager = CloudLLMManager()
+            
+            # Add OpenAI if API key is set
+            openai_key = os.getenv('OPENAI_API_KEY')
+            if openai_key:
+                openai_llm = OpenAILLM(
+                    api_key=openai_key,
+                    model=getattr(config.PiConfig, 'OPENAI_MODEL', 'gpt-4')
+                )
+                prefer_cloud = getattr(config.PiConfig, 'PREFER_CLOUD_LLM', False)
+                cloud_manager.add_provider('openai', openai_llm, set_default=prefer_cloud)
+            
+            # Add Gemini if API key is set
+            gemini_key = os.getenv('GEMINI_API_KEY')
+            if gemini_key:
+                gemini_llm = GeminiLLM(
+                    api_key=gemini_key,
+                    model=getattr(config.PiConfig, 'GEMINI_MODEL', 'gemini-pro')
+                )
+                prefer_cloud = getattr(config.PiConfig, 'PREFER_CLOUD_LLM', False)
+                if not openai_key:
+                    cloud_manager.add_provider('gemini', gemini_llm, set_default=prefer_cloud)
+                else:
+                    cloud_manager.add_provider('gemini', gemini_llm)
+            
+            prefer_cloud = getattr(config.PiConfig, 'PREFER_CLOUD_LLM', False)
+            self._orchestrator = PiOrchestrator(
+                self.llm, 
+                cloud_manager,
+                prefer_cloud=prefer_cloud
+            )
+        return self._orchestrator
     
     def start(self):
         """Start JARVIS system"""
